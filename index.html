@@ -79,6 +79,51 @@ input::placeholder,textarea::placeholder{color:#ccc}
 @keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+/* ===== BOSS DESKTOP DASHBOARD ===== */
+body.boss-mode{max-width:100%;margin:0;background:#f0ebe4}
+body.boss-mode ::-webkit-scrollbar{width:6px;height:6px}
+body.boss-mode ::-webkit-scrollbar-thumb{background:var(--bl);border-radius:3px}
+body.boss-mode ::-webkit-scrollbar-track{background:transparent}
+body.boss-mode .topbar{padding:12px 30px;border-bottom:1px solid rgba(180,140,100,.12);background:rgba(255,255,255,.96)}
+body.boss-mode #bNav{position:fixed;top:0;left:0;bottom:0;right:auto;width:220px;flex-direction:column;justify-content:flex-start;align-items:stretch;padding:20px 12px;padding-top:24px;border-top:none;border-right:1px solid rgba(180,140,100,.12);background:#fff;max-width:none;gap:4px;z-index:200}
+body.boss-mode .nb{flex-direction:row;justify-content:flex-start;gap:10px;padding:12px 16px;border-radius:12px;opacity:.7}
+body.boss-mode .nb.ac{opacity:1;background:linear-gradient(135deg,var(--brown),var(--bl));transform:none}
+body.boss-mode .nb.ac .nl{color:#fff}
+body.boss-mode .nb.ac .ni{filter:none}
+body.boss-mode .nb .ni{font-size:18px}
+body.boss-mode .nb .nl{font-size:13px;font-weight:600;color:#666}
+body.boss-mode .nb.ab .ni{font-size:18px}
+body.boss-mode #mainApp{margin-left:220px;max-width:none}
+body.boss-mode .topbar{margin-left:0}
+body.boss-mode .pg{padding:0 30px 40px;max-width:1200px}
+body.boss-mode .hero{border-radius:20px;padding:28px 32px}
+body.boss-mode .modal-form{align-items:center}
+body.boss-mode .mf-box{border-radius:24px;max-width:560px;max-height:90vh;animation:popIn .3s ease}
+body.boss-mode .pm-card{transition:all .2s;border:1px solid rgba(180,140,100,.08)}
+body.boss-mode .pm-card:hover{border-color:var(--brown);box-shadow:0 4px 16px rgba(139,94,60,.1);transform:translateY(-1px)}
+body.boss-mode .cd{transition:all .2s}
+body.boss-mode .cd:hover{box-shadow:0 4px 16px rgba(139,94,60,.08)}
+body.boss-mode .ur:hover{border-color:var(--brown);box-shadow:0 2px 12px rgba(139,94,60,.08)}
+.boss-sidebar-head{padding:4px 16px 20px;margin-bottom:8px;border-bottom:1px solid rgba(180,140,100,.1)}
+.boss-sidebar-head img{width:36px;height:36px;border-radius:10px}
+.boss-sidebar-head .bsh-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--brown)}
+.boss-sidebar-head .bsh-sub{font-size:10px;color:#aaa;letter-spacing:2px;text-transform:uppercase}
+.boss-sidebar-section{font-size:10px;color:#aaa;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:16px 16px 6px}
+@media(max-width:768px){
+  body.boss-mode #bNav{width:64px;padding:16px 6px}
+  body.boss-mode .nb .nl{display:none}
+  body.boss-mode .nb{justify-content:center;padding:12px 8px}
+  body.boss-mode #mainApp{margin-left:64px}
+  body.boss-mode .boss-sidebar-head{display:none}
+  body.boss-mode .boss-sidebar-section{display:none}
+  body.boss-mode .pg{padding:0 16px 40px}
+}
+/* Boss wide layout helpers */
+body.boss-mode #homeStats{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))!important}
+body.boss-mode #prodMgmt{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px}
+body.boss-mode #teamC .ur:hover{border-color:var(--brown)}
+body.boss-mode table{border-radius:12px;overflow:hidden}
+body.boss-mode #pg-orders .sbar{max-width:400px}
 </style>
 </head>
 <body>
@@ -211,22 +256,38 @@ function getDailyNo(date){return orders.filter(o=>o.date===date&&o.addedBy===cu.
 
 // LOGIN
 function doLogin(){const e=document.getElementById('loginEmail').value.trim().toLowerCase(),p=document.getElementById('loginPin').value.trim(),err=document.getElementById('loginErr');if(!e||!p){err.textContent="กรุณากรอกอีเมลและรหัส PIN";return}const u=users.find(x=>x.email.toLowerCase()===e&&x.pin===p);if(!u){err.textContent="อีเมลหรือรหัส PIN ไม่ถูกต้อง";return}cu=u;sv('cream_cu',u);err.textContent="";showApp()}
-function doLogout(){cu=null;try{localStorage.removeItem('cream_cu')}catch(e){}document.getElementById('mainApp').style.display='none';document.getElementById('bNav').style.display='none';document.getElementById('loginPage').style.display='flex';document.getElementById('loginEmail').value='';document.getElementById('loginPin').value=''}
+function doLogout(){cu=null;try{localStorage.removeItem('cream_cu')}catch(e){}document.body.classList.remove('boss-mode');document.getElementById('mainApp').style.display='none';document.getElementById('bNav').style.display='none';document.getElementById('loginPage').style.display='flex';document.getElementById('loginEmail').value='';document.getElementById('loginPin').value=''}
 function checkSession(){try{const s=localStorage.getItem('cream_cu');if(s){const u=JSON.parse(s);const v=users.find(x=>x.email===u.email&&x.pin===u.pin);if(v){cu=v;showApp()}}}catch(e){}}
 function showApp(){
   document.getElementById('loginPage').style.display='none';document.getElementById('mainApp').style.display='block';document.getElementById('bNav').style.display='flex';
+  // Boss desktop mode
+  if(cu.role==='boss'){document.body.classList.add('boss-mode')}else{document.body.classList.remove('boss-mode')}
   // โหลด productAssign ล่าสุดทุกครั้งที่ login
   productAssign=ld('cream_prodAssign',{});
   document.getElementById('topNm').textContent=cu.name;
-  const r=document.getElementById('topRl');if(cu.role==='boss'){r.textContent='👑 หัวหน้า';r.className='trole rb'}else{r.textContent='👤 แอดมิน';r.className='trole ra'}
+  const r=document.getElementById('topRl');if(cu.role==='boss'){r.textContent='หัวหน้า';r.className='trole rb'}else{r.textContent='แอดมิน';r.className='trole ra'}
   document.getElementById('topTm').textContent=cu.team!=='ทั้งหมด'?cu.team:'';buildNav();
   // โหลดสินค้าจาก Sheets
   loadProductsFromSheets().then(()=>nav('home'));
 }
 function buildNav(){
-  const b=cu.role==='boss';let t=[{id:'home',i:'🏠',l:'หน้าแรก'},{id:'add',i:'🧴',l:'บันทึก',c:'ab'},{id:'orders',i:'📋',l:'รายการ'}];
+  const b=cu.role==='boss';
+  let t=[{id:'home',i:'🏠',l:'หน้าแรก'},{id:'add',i:'➕',l:'บันทึก'},{id:'orders',i:'📋',l:'รายการ'}];
   if(b){t.push({id:'dash',i:'📊',l:'แดชบอร์ด'});t.push({id:'settings',i:'⚙️',l:'ตั้งค่า'})}
-  document.getElementById('bNav').innerHTML=t.map(x=>`<button class="nb ${x.c||''}" data-p="${x.id}" onclick="nav('${x.id}')"><span class="ni">${x.i}</span><span class="nl">${x.l}</span></button>`).join('');
+  if(b){
+    document.getElementById('bNav').innerHTML=`
+      <div class="boss-sidebar-head">
+        <div class="bsh-title">ADMIN THEMT</div>
+        <div class="bsh-sub">Boss Dashboard</div>
+      </div>
+      <div class="boss-sidebar-section">เมนูหลัก</div>
+      ${t.slice(0,3).map(x=>`<button class="nb" data-p="${x.id}" onclick="nav('${x.id}')"><span class="ni">${x.i}</span><span class="nl">${x.l}</span></button>`).join('')}
+      <div class="boss-sidebar-section">จัดการ</div>
+      ${t.slice(3).map(x=>`<button class="nb" data-p="${x.id}" onclick="nav('${x.id}')"><span class="ni">${x.i}</span><span class="nl">${x.l}</span></button>`).join('')}
+    `;
+  }else{
+    document.getElementById('bNav').innerHTML=t.map(x=>`<button class="nb ${x.c||''}" data-p="${x.id}" onclick="nav('${x.id}')"><span class="ni">${x.i}</span><span class="nl">${x.l}</span></button>`).join('');
+  }
 }
 function nav(p){
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('ac'));const el=document.getElementById('pg-'+p);if(el)el.classList.add('ac');
@@ -311,7 +372,7 @@ function renderAdminHome(td){
   document.getElementById('homeStats').innerHTML=myP.map(p=>{
     const sum=to.filter(o=>o.productId===p.id).reduce((s,o)=>s+o.qty,0);
     const imgEl=p.img?`<img src="${p.img}" style="width:40px;height:40px;object-fit:cover;border-radius:10px">`:
-      `<span style="font-size:18px;font-weight:800;color:var(--brown)">${(p.short||p.name||'?')[0]}</span>`;
+      `<span style="font-size:11px;font-weight:700;color:var(--brown);line-height:1.2">${p.short||p.name||'?'}</span>`;
     return`<div class="cd" style="text-align:center;padding:12px"><div>${imgEl}</div><div style="font-weight:800;font-size:20px;color:var(--brown);margin-top:4px">${sum}</div><div style="font-size:10px;color:#aaa">${p.short}</div></div>`;
   }).join('');
   document.getElementById('adminReport').style.display='none';
@@ -430,7 +491,7 @@ function renderBossHome(td){
       document.getElementById('homeStats').style.gridTemplateColumns=`repeat(${cols},1fr)`;
       document.getElementById('homeStats').innerHTML=prodKeys.map(k=>{
         const p=products.find(x=>x.short===k||x.name===k||x.name.indexOf(k)!==-1);
-        return`<div class="cd" style="text-align:center;padding:12px"><div style="font-size:18px;font-weight:800;color:var(--brown)">${p?(p.short||p.name||'?')[0]:'?'}</div><div style="font-weight:800;font-size:20px;color:var(--brown);margin-top:4px">${prodMap[k]}</div><div style="font-size:10px;color:#aaa">${k}</div></div>`;
+        return`<div class="cd" style="text-align:center;padding:12px"><div style="font-size:11px;font-weight:700;color:var(--brown);line-height:1.2">${p?(p.short||p.name||'?'):'?'}</div><div style="font-weight:800;font-size:20px;color:var(--brown);margin-top:4px">${prodMap[k]}</div><div style="font-size:10px;color:#aaa">${k}</div></div>`;
       }).join('');
     }else{document.getElementById('homeStats').innerHTML=''}
     
@@ -544,7 +605,7 @@ function renderBossHome(td){
       // ลำดับแยกแต่ละคน (ไม่รวม)
       const personOrders=allOrders.filter(x=>x.adminEmail===o.adminEmail);
       const personalNo=personOrders.indexOf(o)+1;
-      const imgEl=p?.img?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`:`<span style="font-size:16px;font-weight:800;color:var(--brown)">${(p?.short||p?.name||'?')[0]}</span>`;
+      const imgEl=p?.img?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`:`<span style="font-size:10px;font-weight:700;color:var(--brown);line-height:1.2">${p?.short||p?.name||'?'}</span>`;
       h+=`<div style="background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:8px;border:1px solid rgba(180,140,100,.06);display:flex;align-items:center;gap:10px;animation:fadeSlideIn .3s ease ${i*.04}s both"><div style="width:40px;height:40px;border-radius:12px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;overflow:hidden">${imgEl}</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">${dispName}${o.qty>1?' x'+o.qty:''}</div>${o.detail?`<div style="font-size:11px;color:#666;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📝 ${o.detail}</div>`:''}<div style="font-size:11px;color:#aaa;margin-top:2px"><span style="font-size:10px;color:${tc};font-weight:600">${o.adminName}</span>${o.brand?' • '+o.brand:''} • <span style="color:var(--brown);font-weight:600">#${personalNo}</span> • ${o.time}</div></div><div style="font-weight:800;font-size:16px;color:var(--brown)">฿${o.amount.toLocaleString()}</div></div>`;
     })}
     
@@ -559,12 +620,12 @@ function renderBossHome(td){
     const rc=to.slice(0,10);document.getElementById('recent').innerHTML=rc.map((o,i)=>orderRow(o,i)).join('');
   }
 }
-function orderRow(o,i){const p=products.find(x=>x.id===o.productId);const an=users.find(u=>u.email===o.addedBy);const by=cu.role==='boss'&&an?`<span style="font-size:10px;color:var(--bl2);font-weight:600">${an.name}</span> • `:'';const det=o.detail?`<div style="font-size:11px;color:#666;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.detail}</div>`:'';const ph=o.phone?`<div style="font-size:11px;color:#4CAF50;margin-top:1px;font-weight:600">${o.phone.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3')}</div>`:'';const imgEl=p?.img?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`:`<span style="font-size:16px;font-weight:800;color:var(--brown)">${(p?.short||p?.name||'?')[0]}</span>`;return`<div style="background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:8px;border:1px solid rgba(180,140,100,.06);display:flex;align-items:center;gap:10px;animation:fadeSlideIn .3s ease ${i*.04}s both"><div style="width:40px;height:40px;border-radius:12px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;overflow:hidden">${imgEl}</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">${p?.name||o.productId}${o.qty>1?' x'+o.qty:''}</div>${ph}${det}<div style="font-size:11px;color:#aaa;margin-top:2px">${by}#${o.dailyNo} • ${o.time}${o.team&&o.team!=='ทั้งหมด'?' • '+o.team:''}</div></div><div style="font-weight:800;font-size:16px;color:var(--brown)">฿${o.amount.toLocaleString()}</div></div>`}
+function orderRow(o,i){const p=products.find(x=>x.id===o.productId);const an=users.find(u=>u.email===o.addedBy);const by=cu.role==='boss'&&an?`<span style="font-size:10px;color:var(--bl2);font-weight:600">${an.name}</span> • `:'';const det=o.detail?`<div style="font-size:11px;color:#666;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.detail}</div>`:'';const ph=o.phone?`<div style="font-size:11px;color:#4CAF50;margin-top:1px;font-weight:600">${o.phone.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3')}</div>`:'';const imgEl=p?.img?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`:`<span style="font-size:10px;font-weight:700;color:var(--brown);line-height:1.2">${p?.short||p?.name||'?'}</span>`;return`<div style="background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:8px;border:1px solid rgba(180,140,100,.06);display:flex;align-items:center;gap:10px;animation:fadeSlideIn .3s ease ${i*.04}s both"><div style="width:40px;height:40px;border-radius:12px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;overflow:hidden">${imgEl}</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">${p?.name||o.productId}${o.qty>1?' x'+o.qty:''}</div>${ph}${det}<div style="font-size:11px;color:#aaa;margin-top:2px">${by}#${o.dailyNo} • ${o.time}${o.team&&o.team!=='ทั้งหมด'?' • '+o.team:''}</div></div><div style="font-weight:800;font-size:16px;color:var(--brown)">฿${o.amount.toLocaleString()}</div></div>`}
 
 // ADD ORDER
 function initAddPage(){productAssign=ld('cream_prodAssign',{});const now=new Date();document.getElementById('oDate').textContent=fD(now);document.getElementById('oTime').textContent=fT(now);document.getElementById('addInfo').textContent=`${cu.name} • ${fD(now)}`;selProd=null;qty=1;renderProdCards();updateSummary();document.getElementById('qtySection').style.display='none';document.getElementById('qtyVal').textContent='1';document.getElementById('detailSection').style.display='none';document.getElementById('inDetail').value='';document.getElementById('inDetail').style.borderColor='rgba(180,140,100,.15)';document.getElementById('detailErr').textContent='';document.getElementById('phoneDetect').style.display='none';if(window._ti)clearInterval(window._ti);window._ti=setInterval(()=>{document.getElementById('oTime').textContent=fT(new Date())},1000)}
 function getMyProducts(){if(cu.role==='boss')return products;return products.filter(p=>{const a=productAssign[p.id];if(!a||a.length===0)return true;return a.includes(cu.email)})}
-function renderProdCards(){const myProds=getMyProducts();const allCount=products.length;const cols=myProds.length<=3?myProds.length:Math.min(myProds.length,3);document.getElementById('prodCards').style.display='grid';document.getElementById('prodCards').style.gridTemplateColumns=`repeat(${cols},1fr)`;document.getElementById('prodCards').style.gap='12px';let notice='';if(cu.role!=='boss'&&myProds.length<allCount){notice=`<div style="grid-column:1/-1;text-align:center;font-size:11px;color:var(--bl2);padding:4px 0">🔒 หัวหน้ากำหนดสินค้าให้คุณ ${myProds.length} รายการ</div>`}else if(cu.role!=='boss'&&myProds.length===0){notice=`<div style="grid-column:1/-1;text-align:center;font-size:13px;color:var(--rd);padding:20px 0">⚠️ หัวหน้ายังไม่ได้กำหนดสินค้าให้คุณ</div>`}document.getElementById('prodCards').innerHTML=notice+myProds.map(p=>`<div class="prod-card ${selProd===p.id?'selected':''}" onclick="selectProd('${p.id}')"><div class="pcheck">✓</div><div class="pi">${p.img?`<img src="${p.img}" style="width:48px;height:48px;object-fit:cover;border-radius:12px">`:`<span style="font-size:20px;font-weight:800;color:var(--brown)">${(p.short||p.name||'?')[0]}</span>`}</div><div class="pname">${p.short}</div><div class="pprice">฿${p.price}</div></div>`).join('')}
+function renderProdCards(){const myProds=getMyProducts();const allCount=products.length;const cols=myProds.length<=3?myProds.length:Math.min(myProds.length,3);document.getElementById('prodCards').style.display='grid';document.getElementById('prodCards').style.gridTemplateColumns=`repeat(${cols},1fr)`;document.getElementById('prodCards').style.gap='12px';let notice='';if(cu.role!=='boss'&&myProds.length<allCount){notice=`<div style="grid-column:1/-1;text-align:center;font-size:11px;color:var(--bl2);padding:4px 0">🔒 หัวหน้ากำหนดสินค้าให้คุณ ${myProds.length} รายการ</div>`}else if(cu.role!=='boss'&&myProds.length===0){notice=`<div style="grid-column:1/-1;text-align:center;font-size:13px;color:var(--rd);padding:20px 0">⚠️ หัวหน้ายังไม่ได้กำหนดสินค้าให้คุณ</div>`}document.getElementById('prodCards').innerHTML=notice+myProds.map(p=>`<div class="prod-card ${selProd===p.id?'selected':''}" onclick="selectProd('${p.id}')"><div class="pcheck">✓</div><div class="pi">${p.img?`<img src="${p.img}" style="width:48px;height:48px;object-fit:cover;border-radius:12px">`:`<span style="font-size:11px;font-weight:700;color:var(--brown);line-height:1.2">${p.short||p.name||'?'}</span>`}</div><div class="pname">${p.short}</div><div class="pprice">฿${p.price}</div></div>`).join('')}
 function selectProd(id){selProd=selProd===id?null:id;qty=1;renderProdCards();document.getElementById('qtySection').style.display=selProd?'block':'none';document.getElementById('detailSection').style.display=selProd?'block':'none';document.getElementById('qtyVal').textContent=qty;updateSummary()}
 function chgQty(d){qty=Math.max(1,qty+d);document.getElementById('qtyVal').textContent=qty;updateSummary()}
 function extractPhone(text){const clean=text.replace(/[-\s]/g,'');const m=clean.match(/0\d{9}(?!\d)/g);if(m)return m[0];return null}
@@ -612,7 +673,7 @@ function renderDash(){
   const dd=[];for(let i=6;i>=0;i--){const x=new Date(now);x.setDate(x.getDate()-i);const ds=fD(x);dd.push({d:ds.substring(0,5),t:d.filter(o=>o.date===ds).reduce((s,o)=>s+o.amount,0)})}const mx=Math.max(...dd.map(x=>x.t),1);
   const mB={};d.forEach(o=>{const mk=gMK(o.date);mB[mk]=(mB[mk]||0)+o.amount});
   let h=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;margin-bottom:16px"><div style="border-radius:18px;padding:20px 16px;background:linear-gradient(145deg,var(--brown),var(--bl));position:relative;overflow:hidden"><div style="position:absolute;top:-10px;right:-5px;font-size:50px;opacity:.15">💰</div><div style="font-size:11px;color:rgba(255,255,255,.7)">${dPeriod}</div><div style="font-weight:800;font-size:24px;color:#fff;margin-top:4px">฿${tr.toLocaleString()}</div><div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px">${tc} ออเดอร์</div></div><div style="border-radius:18px;padding:20px 16px;background:linear-gradient(145deg,var(--bp),#E8C9A0);position:relative;overflow:hidden"><div style="position:absolute;top:-10px;right:-5px;font-size:50px;opacity:.15">📦</div><div style="font-size:11px;color:rgba(255,255,255,.7)">จำนวน</div><div style="font-weight:800;font-size:24px;color:#fff;margin-top:4px">${pd.reduce((s,o)=>s+o.qty,0)} ชิ้น</div></div></div>`;
-  h+=`<div class="cd" style="border-radius:18px;padding:18px;margin-bottom:14px"><div style="font-weight:700;font-size:14px;margin-bottom:12px">ตามสินค้า</div>${products.map(p=>{const x=prodB[p.id]||{q:0,a:0};const imgEl=p.img?`<img src="${p.img}" style="width:28px;height:28px;object-fit:cover;border-radius:8px">`:`<span style="font-size:16px;font-weight:800;color:var(--brown)">${(p.short||p.name||'?')[0]}</span>`;return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#faf7f3;border-radius:10px;margin-bottom:6px">${imgEl}<div style="flex:1"><div style="font-size:13px;font-weight:600">${p.short}</div><div style="font-size:11px;color:#aaa">${x.q} ชิ้น</div></div><span style="font-weight:700;font-size:15px;color:var(--brown)">฿${x.a.toLocaleString()}</span></div>`}).join('')}</div>`;
+  h+=`<div class="cd" style="border-radius:18px;padding:18px;margin-bottom:14px"><div style="font-weight:700;font-size:14px;margin-bottom:12px">ตามสินค้า</div>${products.map(p=>{const x=prodB[p.id]||{q:0,a:0};const imgEl=p.img?`<img src="${p.img}" style="width:28px;height:28px;object-fit:cover;border-radius:8px">`:`<span style="font-size:10px;font-weight:700;color:var(--brown);line-height:1.2">${p.short||p.name||'?'}</span>`;return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#faf7f3;border-radius:10px;margin-bottom:6px">${imgEl}<div style="flex:1"><div style="font-size:13px;font-weight:600">${p.short}</div><div style="font-size:11px;color:#aaa">${x.q} ชิ้น</div></div><span style="font-weight:700;font-size:15px;color:var(--brown)">฿${x.a.toLocaleString()}</span></div>`}).join('')}</div>`;
   h+=`<div class="cd" style="border-radius:18px;padding:18px;margin-bottom:14px"><div style="font-weight:700;font-size:14px;margin-bottom:14px">📈 ยอด 7 วัน</div><div style="display:flex;align-items:flex-end;gap:6px;height:100px">${dd.map(x=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="font-size:9px;font-weight:700;color:var(--brown)">${x.t>0?'฿'+x.t.toLocaleString():''}</div><div style="width:100%;background:linear-gradient(0deg,var(--brown),var(--bl));border-radius:6px 6px 0 0;height:${Math.max(4,x.t/mx*70)}px"></div><div style="font-size:9px;color:#aaa">${x.d}</div></div>`).join('')}</div></div>`;
   if(Object.keys(mB).length>0)h+=`<div class="cd" style="border-radius:18px;padding:18px;margin-bottom:14px"><div style="font-weight:700;font-size:14px;margin-bottom:12px">📅 รายเดือน</div>${Object.entries(mB).sort((a,b)=>b[0].localeCompare(a[0])).map(([mk,t])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f5f0eb"><span style="font-size:13px;color:#555">${gMN(mk)}</span><span style="font-weight:700;color:var(--brown)">฿${t.toLocaleString()}</span></div>`).join('')}</div>`;
   if(cu.role==='boss'&&Object.keys(admB).length>0)h+=`<div class="cd" style="border-radius:18px;padding:18px"><div style="font-weight:700;font-size:14px;margin-bottom:12px">👤 ตามแอดมิน</div>${Object.entries(admB).sort((a,b)=>b[1].a-a[1].a).map(([e,x],i)=>{const u=users.find(y=>y.email===e);return`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#faf7f3;border-radius:10px;margin-bottom:6px"><div style="width:28px;height:28px;border-radius:8px;background:${['#8B5E3C','#C4956A','#D4A574','#f59e0b','#4CAF50'][i%5]};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:11px">${i+1}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${u?.name||e}</div><div style="font-size:10px;color:#aaa">${u?.team||''} • ${x.q} ชิ้น</div></div><span style="font-weight:700;color:var(--brown)">฿${x.a.toLocaleString()}</span></div>`}).join('')}</div>`;
@@ -627,7 +688,7 @@ function renderProdMgmt(){
     const assigned=productAssign[p.id]||[];
     const assignLabel=assigned.length===0?'<span style="color:var(--gr);font-size:10px">ทุกคน</span>':assigned.map(e=>{const u=users.find(x=>x.email===e);return u?u.name:e}).join(', ');
     return`<div class="pm-card" onclick="showEditProduct('${p.id}')">
-      <div style="width:48px;height:48px;border-radius:14px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden">${p.img?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`:`<span style="font-size:18px;font-weight:800;color:var(--brown)">${(p.short||p.name||'?')[0]}</span>`}</div>
+      <div style="width:48px;height:48px;border-radius:14px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden">${p.img?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`:`<span style="font-size:11px;font-weight:700;color:var(--brown);line-height:1.2">${p.short||p.name||'?'}</span>`}</div>
       <div style="flex:1"><div style="font-weight:700;font-size:14px">${p.name}</div><div style="font-size:11px;color:#aaa;margin-top:2px">${p.sku?'SKU: '+p.sku+' • ':''}กลุ่ม: ${p.sheet||'-'} • ${p.short}</div><div style="font-size:10px;color:var(--bl2);margin-top:2px">${assignLabel}</div></div>
       <div style="text-align:right"><div style="font-weight:800;font-size:16px;color:var(--brown)">฿${p.price}</div><div style="font-size:10px;color:var(--bl2);margin-top:2px">แก้ไข →</div></div>
     </div>`}).join('');
@@ -641,7 +702,7 @@ function renderProdAssign(){
   products.forEach(p=>{
     const assigned=productAssign[p.id]||[];
     const allAssigned=assigned.length===0;
-    const imgEl=p.img?`<img src="${p.img}" style="width:32px;height:32px;object-fit:cover;border-radius:8px">`:`<span style="font-size:16px;font-weight:800;color:var(--brown)">${(p.short||p.name||'?')[0]}</span>`;
+    const imgEl=p.img?`<img src="${p.img}" style="width:32px;height:32px;object-fit:cover;border-radius:8px">`:`<span style="font-size:10px;font-weight:700;color:var(--brown);line-height:1.2">${p.short||p.name||'?'}</span>`;
     h+=`<div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid ${assignDirty?'rgba(139,94,60,.2)':'rgba(180,140,100,.08)'}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <div style="width:32px;height:32px;border-radius:8px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;overflow:hidden">${imgEl}</div>
