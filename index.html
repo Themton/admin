@@ -305,9 +305,10 @@ function showApp(){
   document.getElementById('topNm').textContent=cu.name;
   const r=document.getElementById('topRl');if(cu.role==='boss'){r.textContent='หัวหน้า';r.className='trole rb'}else{r.textContent='แอดมิน';r.className='trole ra'}
   document.getElementById('topTm').textContent=cu.team!=='ทั้งหมด'?cu.team:'';buildNav();
-  // โหลดสินค้าจาก Sheets พร้อมแสดงสถานะ
-  const pg=document.getElementById('pg');if(pg)pg.innerHTML='<div style="text-align:center;padding:40px 20px"><div style="font-size:40px;margin-bottom:12px">☁️</div><div style="font-size:14px;color:#888">กำลังโหลดข้อมูลจาก Cloud...</div></div>';
-  loadProductsFromSheets().then(()=>{nav(cu.role==='boss'?'home':'add')}).catch(()=>{nav(cu.role==='boss'?'home':'add')});
+  // แสดงหน้าทันที ไม่รอ Cloud
+  nav(cu.role==='boss'?'home':'add');
+  // โหลด Cloud ใน background
+  loadProductsFromSheets().then(()=>{if(cu.role!=='boss'&&products.length>0)renderProdCards()});
 }
 function buildNav(){
   const b=cu.role==='boss';
@@ -332,7 +333,7 @@ function nav(p){
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('ac'));const el=document.getElementById('pg-'+p);if(el)el.classList.add('ac');
   document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('ac',b.dataset.p===p));
   document.getElementById('stickySubmit').style.display=p==='add'?'block':'none';
-  if(p==='home')updateHome();if(p==='add'){loadProductsFromSheets().then(()=>initAddPage()).catch(()=>initAddPage())}if(p==='orders'){if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}else{renderOrd()}}if(p==='dash'){buildDF();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}else{renderDash()}}if(p==='settings'){renderProdMgmt();renderProdAssign();renderTeam()}window.scrollTo(0,0);
+  if(p==='home')updateHome();if(p==='add'){initAddPage();loadProductsFromSheets().then(()=>renderProdCards())}if(p==='orders'){if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}else{renderOrd()}}if(p==='dash'){buildDF();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}else{renderDash()}}if(p==='settings'){renderProdMgmt();renderProdAssign();renderTeam()}window.scrollTo(0,0);
 }
 
 // รวมออเดอร์จาก Sheets เข้า orders (สำหรับ boss)
@@ -977,7 +978,7 @@ function hideSuc(){document.getElementById('sucOv').style.display='none'}
 
 document.addEventListener('DOMContentLoaded',()=>{
   // === Auto-Update System ===
-  const APP_VER='v10.4';
+  const APP_VER='v10.5';
   window._APP_VER=APP_VER;
   // ล้าง cache เมื่อเวอร์ชันเปลี่ยน
   if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.removeItem('cream_products');localStorage.removeItem('cream_prodAssign');localStorage.setItem('cream_ver',APP_VER);console.log('Cache cleared for '+APP_VER)}
