@@ -322,17 +322,12 @@ function showApp(){
   document.getElementById('topTm').textContent=cu.team!=='ทั้งหมด'?cu.team:'';buildNav();
   // แสดงหน้าทันที ไม่รอ Cloud
   nav(cu.role==='boss'?'home':'add');
+  // Boss: sync ทุกอย่างขึ้น Cloud อัตโนมัติทุกครั้ง
+  if(cu.role==='boss'){
+    setTimeout(()=>{syncProducts();syncUsers();syncAssign();console.log('Auto-sync ALL to Cloud')},1000);
+  }
   // โหลด Cloud ใน background
-  loadProductsFromSheets().then(()=>{
-    if(cu.role!=='boss'&&products.length>0)renderProdCards();
-    // Boss auto-sync ทุกอย่างขึ้น Cloud อัตโนมัติ
-    if(cu.role==='boss'){
-      if(products.length>0)syncProducts();
-      if(users.length>0)syncUsers();
-      syncAssign();
-      console.log('Boss auto-sync: products='+products.length+', users='+users.length);
-    }
-  });
+  loadProductsFromSheets().then(()=>{if(cu.role!=='boss'&&products.length>0)renderProdCards()});
 }
 function buildNav(){
   const b=cu.role==='boss';
@@ -1003,7 +998,7 @@ function hideSuc(){document.getElementById('sucOv').style.display='none'}
 
 document.addEventListener('DOMContentLoaded',()=>{
   // === Auto-Update System ===
-  const APP_VER='v11.0';
+  const APP_VER='v11.1';
   window._APP_VER=APP_VER;
   // ล้าง cache เมื่อเวอร์ชันเปลี่ยน
   if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.removeItem('cream_products');localStorage.removeItem('cream_prodAssign');localStorage.setItem('cream_ver',APP_VER);console.log('Cache cleared for '+APP_VER)}
@@ -1024,9 +1019,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     }catch(e){}
   },30000);
 
-  // === Auto-Refresh สินค้าจาก Cloud ทุก 60 วิ (ไม่ต้อง logout) ===
+  // === Auto-Sync ทุก 60 วิ ===
+  // Boss: push ขึ้น Cloud | Admin: pull จาก Cloud
   setInterval(async()=>{
     if(!cu)return;
+    if(cu.role==='boss'){syncProducts();syncUsers();syncAssign();console.log('Boss auto-push to Cloud')}
     try{
       const res=await fetch(APPS_SCRIPT_URL);
       const data=await res.json();
