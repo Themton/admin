@@ -310,7 +310,8 @@ function doLogin(){
   }).catch(()=>{err.textContent="อีเมลหรือรหัส PIN ไม่ถูกต้อง"})
 }
 function doLogout(){cu=null;try{localStorage.removeItem('cream_cu')}catch(e){}document.body.classList.remove('boss-mode');document.getElementById('mainApp').style.display='none';document.getElementById('bNav').style.display='none';document.getElementById('loginPage').style.display='flex';document.getElementById('loginEmail').value='';document.getElementById('loginPin').value=''}
-function checkSession(){try{const s=localStorage.getItem('cream_cu');if(s){const u=JSON.parse(s);const v=users.find(x=>x.email===u.email&&x.pin===u.pin);if(v){cu=v;showApp()}}}catch(e){}}
+function checkSession(){try{const s=localStorage.getItem('cream_cu');if(s){const u=JSON.parse(s);const v=users.find(x=>x.email===u.email&&x.pin===u.pin);if(v){cu=v;showApp();// ตรวจสอบกับ Cloud ว่ายังมีสิทธิ์อยู่ไหม
+fetch(APPS_SCRIPT_URL).then(r=>r.json()).then(data=>{if(data.users&&data.users.length>0){const still=data.users.find(x=>x.email===cu.email&&x.pin===cu.pin);if(!still){cu=null;localStorage.removeItem('cream_cu');location.reload()}}}).catch(()=>{})}}}catch(e){}}
 function showApp(){
   document.getElementById('loginPage').style.display='none';document.getElementById('mainApp').style.display='block';document.getElementById('bNav').style.display='flex';
   // Boss desktop mode
@@ -998,7 +999,7 @@ function hideSuc(){document.getElementById('sucOv').style.display='none'}
 
 document.addEventListener('DOMContentLoaded',()=>{
   // === Auto-Update System ===
-  const APP_VER='v11.1';
+  const APP_VER='v11.2';
   window._APP_VER=APP_VER;
   // ล้าง cache เมื่อเวอร์ชันเปลี่ยน
   if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.removeItem('cream_products');localStorage.removeItem('cream_prodAssign');localStorage.setItem('cream_ver',APP_VER);console.log('Cache cleared for '+APP_VER)}
@@ -1032,7 +1033,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         const changed=JSON.stringify(sp)!==JSON.stringify(products);
         if(changed){products=sp;sv('cream_products',products);console.log('Products auto-refreshed:',products.length)}
       }
-      if(data.assign){const changed2=JSON.stringify(data.assign)!==JSON.stringify(productAssign);if(changed2){productAssign=data.assign;sv('cream_prodAssign',productAssign)}}if(data.users&&data.users.length>0){const changed3=JSON.stringify(data.users)!==JSON.stringify(users);if(changed3){users=data.users;sv('cream_users',users);console.log('Users auto-refreshed:',users.length)}}
+      if(data.assign){const changed2=JSON.stringify(data.assign)!==JSON.stringify(productAssign);if(changed2){productAssign=data.assign;sv('cream_prodAssign',productAssign)}}if(data.users&&data.users.length>0){const changed3=JSON.stringify(data.users)!==JSON.stringify(users);if(changed3){users=data.users;sv('cream_users',users);console.log('Users auto-refreshed:',users.length)}if(cu&&cu.role!=='boss'){const still=data.users.find(x=>x.email===cu.email&&x.pin===cu.pin);if(!still){cu=null;localStorage.removeItem('cream_cu');location.reload()}}}
     }catch(e){}
   },60000);
 
