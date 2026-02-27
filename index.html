@@ -293,7 +293,22 @@ const gTC=t=>tC[t]||'#8B5E3C';
 function getDailyNo(date){return orders.filter(o=>o.date===date&&o.addedBy===cu.email).length+1}
 
 // LOGIN
-function doLogin(){const e=document.getElementById('loginEmail').value.trim().toLowerCase(),p=document.getElementById('loginPin').value.trim(),err=document.getElementById('loginErr');if(!e||!p){err.textContent="กรุณากรอกอีเมลและรหัส PIN";return}const u=users.find(x=>x.email.toLowerCase()===e&&x.pin===p);if(!u){err.textContent="อีเมลหรือรหัส PIN ไม่ถูกต้อง";return}cu=u;sv('cream_cu',u);err.textContent="";showApp()}
+function doLogin(){
+  const e=document.getElementById('loginEmail').value.trim().toLowerCase(),p=document.getElementById('loginPin').value.trim(),err=document.getElementById('loginErr');
+  if(!e||!p){err.textContent="กรุณากรอกอีเมลและรหัส PIN";return}
+  const u=users.find(x=>x.email.toLowerCase()===e&&x.pin===p);
+  if(u){cu=u;sv('cream_cu',u);err.textContent="";showApp();return}
+  // ไม่เจอในเครื่อง → ลองดึงจาก Cloud
+  err.textContent="กำลังตรวจสอบ...";
+  fetch(APPS_SCRIPT_URL).then(r=>r.json()).then(data=>{
+    if(data.users&&data.users.length>0){users=data.users;sv('cream_users',users)}
+    if(data.products&&data.products.length>0){products=data.products.map(p2=>({...p2,img:p2.img||''}));sv('cream_products',products)}
+    if(data.assign){productAssign=data.assign;sv('cream_prodAssign',productAssign)}
+    const u2=users.find(x=>x.email.toLowerCase()===e&&x.pin===p);
+    if(u2){cu=u2;sv('cream_cu',u2);err.textContent="";showApp()}
+    else{err.textContent="อีเมลหรือรหัส PIN ไม่ถูกต้อง"}
+  }).catch(()=>{err.textContent="อีเมลหรือรหัส PIN ไม่ถูกต้อง"})
+}
 function doLogout(){cu=null;try{localStorage.removeItem('cream_cu')}catch(e){}document.body.classList.remove('boss-mode');document.getElementById('mainApp').style.display='none';document.getElementById('bNav').style.display='none';document.getElementById('loginPage').style.display='flex';document.getElementById('loginEmail').value='';document.getElementById('loginPin').value=''}
 function checkSession(){try{const s=localStorage.getItem('cream_cu');if(s){const u=JSON.parse(s);const v=users.find(x=>x.email===u.email&&x.pin===u.pin);if(v){cu=v;showApp()}}}catch(e){}}
 function showApp(){
@@ -308,7 +323,16 @@ function showApp(){
   // แสดงหน้าทันที ไม่รอ Cloud
   nav(cu.role==='boss'?'home':'add');
   // โหลด Cloud ใน background
-  loadProductsFromSheets().then(()=>{if(cu.role!=='boss'&&products.length>0)renderProdCards()});
+  loadProductsFromSheets().then(()=>{
+    if(cu.role!=='boss'&&products.length>0)renderProdCards();
+    // Boss auto-sync ทุกอย่างขึ้น Cloud อัตโนมัติ
+    if(cu.role==='boss'){
+      if(products.length>0)syncProducts();
+      if(users.length>0)syncUsers();
+      syncAssign();
+      console.log('Boss auto-sync: products='+products.length+', users='+users.length);
+    }
+  });
 }
 function buildNav(){
   const b=cu.role==='boss';
@@ -702,11 +726,12 @@ async function sendToSheets(o){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return
 // SYNC สินค้าไป Google Sheets
 function syncProducts(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;const body=JSON.stringify({action:"saveProducts",products:products.map(p=>({id:p.id,name:p.name,short:p.short,price:p.price,icon:p.icon||"",sheet:p.sheet,sku:p.sku||"",img:p.img||""}))});fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body}).then(()=>console.log("SyncProducts sent")).catch(e=>console.log("SyncProducts err:",e))}
 function syncAssign(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;const body=JSON.stringify({action:"saveAssign",assign:productAssign});fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body}).then(()=>console.log("SyncAssign sent")).catch(e=>console.log("SyncAssign err:",e))}
-async function forceSyncToSheets(){if(products.length===0){showSuc('⚠️','ไม่มีสินค้า','เพิ่มสินค้าก่อน');setTimeout(hideSuc,1500);return}showSuc('☁️','กำลัง Sync...','อัปโหลดสินค้า '+products.length+' รายการ');try{const body=JSON.stringify({action:"saveProducts",products:products.map(p=>({id:p.id,name:p.name,short:p.short,price:p.price,icon:p.icon||"",sheet:p.sheet,sku:p.sku||"",img:p.img||""}))});await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body});syncAssign();showSuc('✅','Sync สำเร็จ!','สินค้า '+products.length+' รายการ อัปโหลดแล้ว\nรอ 5 วิ แล้วให้แอดมิน logout/login ใหม่');setTimeout(hideSuc,4000)}catch(e){showSuc('❌','Sync ไม่สำเร็จ',e.message||'ลองใหม่');setTimeout(hideSuc,3000)}}
+function syncUsers(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;const body=JSON.stringify({action:"saveUsers",users:users.map(u=>({email:u.email,pin:u.pin,name:u.name,role:u.role,team:u.team}))});fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body}).then(()=>console.log("SyncUsers sent")).catch(e=>console.log("SyncUsers err:",e))}
+async function forceSyncToSheets(){if(products.length===0){showSuc('⚠️','ไม่มีสินค้า','เพิ่มสินค้าก่อน');setTimeout(hideSuc,1500);return}showSuc('☁️','กำลัง Sync...','อัปโหลดสินค้า '+products.length+' รายการ');try{const body=JSON.stringify({action:"saveProducts",products:products.map(p=>({id:p.id,name:p.name,short:p.short,price:p.price,icon:p.icon||"",sheet:p.sheet,sku:p.sku||"",img:p.img||""}))});await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body});syncAssign();syncUsers();showSuc('✅','Sync สำเร็จ!','สินค้า '+products.length+' รายการ อัปโหลดแล้ว\nรอ 5 วิ แล้วให้แอดมิน logout/login ใหม่');setTimeout(hideSuc,4000)}catch(e){showSuc('❌','Sync ไม่สำเร็จ',e.message||'ลองใหม่');setTimeout(hideSuc,3000)}}
 async function testConnection(){showSuc('🔍','กำลังทดสอบ...','เชื่อมต่อ Google Sheets');try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();const pCount=data.products?data.products.length:0;const oCount=data.orders?data.orders.length:0;showSuc('✅','เชื่อมต่อสำเร็จ!','สินค้าใน Cloud: '+pCount+' รายการ\nออเดอร์วันนี้: '+oCount+' รายการ');setTimeout(hideSuc,4000)}catch(e){showSuc('❌','เชื่อมต่อไม่ได้',e.message||'ตรวจสอบ URL');setTimeout(hideSuc,3000)}}
 
 // โหลดสินค้าจาก Sheets (ใช้ตอน login)
-async function loadProductsFromSheets(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();console.log("Sheets response:",JSON.stringify(data).substring(0,300));if(data.products&&data.products.length>0){const sp=data.products.map(p=>({...p,img:p.img||''}));products=sp;sv('cream_products',products);console.log("Loaded "+products.length+" products from Sheets")}else{console.log("No products in Sheets. Local:"+products.length);if(cu&&cu.role==='boss'&&products.length>0){console.log("Boss auto-sync products to Sheets");syncProducts();syncAssign()}}if(data.assign){productAssign=data.assign;sv('cream_prodAssign',productAssign)}}catch(e){console.log("LoadProd error:",e.message||e)}}
+async function loadProductsFromSheets(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();console.log("Sheets response:",JSON.stringify(data).substring(0,300));if(data.products&&data.products.length>0){const sp=data.products.map(p=>({...p,img:p.img||''}));products=sp;sv('cream_products',products);console.log("Loaded "+products.length+" products from Sheets")}else{console.log("No products in Sheets. Local:"+products.length);if(cu&&cu.role==='boss'&&products.length>0){console.log("Boss auto-sync products to Sheets");syncProducts();syncAssign()}}if(data.assign){productAssign=data.assign;sv('cream_prodAssign',productAssign)}if(data.users&&data.users.length>0){users=data.users;sv('cream_users',users);console.log("Loaded "+users.length+" users from Sheets")}else if(cu&&cu.role==='boss'&&users.length>0){syncUsers()}}catch(e){console.log("LoadProd error:",e.message||e)}}
 
 // ORDERS
 function renderOrd(){
@@ -945,14 +970,14 @@ function renderTeam(){
   document.getElementById('teamC').innerHTML=h;
 }
 function showAddMember(){document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box"><div class="mf-title">➕ เพิ่มสมาชิก <button class="mf-close" onclick="closeM()">✕</button></div><input class="mf-input" id="mNm" placeholder="ชื่อ"><input class="mf-input" id="mEm" placeholder="อีเมล Hotmail" type="email"><input class="mf-input" id="mPn" placeholder="PIN 4 หลัก" maxlength="4" inputmode="numeric"><select class="mf-select" id="mTm"><option value="">-- เลือกทีม --</option>${teams.map(t=>`<option>${t}</option>`).join('')}</select><button class="mf-btn" onclick="doAddMem()">✅ เพิ่ม</button><div class="lerr" id="mErr" style="margin-top:8px"></div></div></div>`}
-function doAddMem(){const nm=document.getElementById('mNm').value.trim(),em=document.getElementById('mEm').value.trim().toLowerCase(),pn=document.getElementById('mPn').value.trim(),tm=document.getElementById('mTm').value,err=document.getElementById('mErr');if(!nm||!em||!pn||!tm){err.textContent='กรอกข้อมูลให้ครบ';return}if(pn.length!==4){err.textContent='PIN ต้อง 4 หลัก';return}if(users.find(u=>u.email===em)){err.textContent='อีเมลนี้มีแล้ว';return}users.push({email:em,pin:pn,name:nm,role:'admin',team:tm});sv('cream_users',users);closeM();renderTeam();showSuc('✅','เพิ่มสำเร็จ!','');setTimeout(hideSuc,1400)}
+function doAddMem(){const nm=document.getElementById('mNm').value.trim(),em=document.getElementById('mEm').value.trim().toLowerCase(),pn=document.getElementById('mPn').value.trim(),tm=document.getElementById('mTm').value,err=document.getElementById('mErr');if(!nm||!em||!pn||!tm){err.textContent='กรอกข้อมูลให้ครบ';return}if(pn.length!==4){err.textContent='PIN ต้อง 4 หลัก';return}if(users.find(u=>u.email===em)){err.textContent='อีเมลนี้มีแล้ว';return}users.push({email:em,pin:pn,name:nm,role:'admin',team:tm});sv('cream_users',users);syncUsers();closeM();renderTeam();showSuc('✅','เพิ่มสำเร็จ!','');setTimeout(hideSuc,1400)}
 function showEditMember(em){const u=users.find(x=>x.email===em);if(!u)return;document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box"><div class="mf-title">✏️ แก้ไข <button class="mf-close" onclick="closeM()">✕</button></div><div style="font-size:12px;color:#aaa;margin-bottom:12px">${u.email}</div><input class="mf-input" id="eNm" value="${u.name}"><input class="mf-input" id="ePn" value="${u.pin}" maxlength="4" inputmode="numeric"><select class="mf-select" id="eTm">${teams.map(t=>`<option ${u.team===t?'selected':''}>${t}</option>`).join('')}</select><button class="mf-btn" onclick="doEditMem('${em}')">💾 บันทึก</button><button class="mf-btn danger" onclick="doDelMem('${em}')">🗑️ ลบ</button></div></div>`}
-function doEditMem(em){const i=users.findIndex(u=>u.email===em);if(i<0)return;users[i]={...users[i],name:document.getElementById('eNm').value.trim(),pin:document.getElementById('ePn').value.trim(),team:document.getElementById('eTm').value};sv('cream_users',users);closeM();renderTeam();showSuc('✅','สำเร็จ!','');setTimeout(hideSuc,1200)}
-function doDelMem(em){const u=users.find(x=>x.email===em);if(!u||u.role==='boss')return;if(!confirm(`ลบ "${u.name}"?`))return;users=users.filter(x=>x.email!==em);sv('cream_users',users);closeM();renderTeam()}
+function doEditMem(em){const i=users.findIndex(u=>u.email===em);if(i<0)return;users[i]={...users[i],name:document.getElementById('eNm').value.trim(),pin:document.getElementById('ePn').value.trim(),team:document.getElementById('eTm').value};sv('cream_users',users);syncUsers();closeM();renderTeam();showSuc('✅','สำเร็จ!','');setTimeout(hideSuc,1200)}
+function doDelMem(em){const u=users.find(x=>x.email===em);if(!u||u.role==='boss')return;if(!confirm(`ลบ "${u.name}"?`))return;users=users.filter(x=>x.email!==em);sv('cream_users',users);syncUsers();closeM();renderTeam()}
 function showAddTeam(){document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box"><div class="mf-title">🏷️ สร้างทีม <button class="mf-close" onclick="closeM()">✕</button></div><input class="mf-input" id="tNm" placeholder="ชื่อทีม"><button class="mf-btn" onclick="doAddTeam()">✅ สร้าง</button><div class="lerr" id="tErr" style="margin-top:8px"></div></div></div>`}
 function doAddTeam(){const nm=document.getElementById('tNm').value.trim();if(!nm){document.getElementById('tErr').textContent='ใส่ชื่อ';return}if(teams.includes(nm)){document.getElementById('tErr').textContent='มีแล้ว';return}teams.push(nm);sv('cream_teams',teams);closeM();renderTeam();showSuc('✅','สำเร็จ!','');setTimeout(hideSuc,1200)}
 function showEditTeam(nm){const mc=users.filter(u=>u.team===nm).length;document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box"><div class="mf-title">✏️ ทีม <button class="mf-close" onclick="closeM()">✕</button></div><input class="mf-input" id="etNm" value="${nm}"><button class="mf-btn" onclick="doRenTeam('${nm}')">💾 เปลี่ยนชื่อ</button>${mc===0?`<button class="mf-btn danger" onclick="doDelTeam('${nm}')">🗑️ ลบ</button>`:''}</div></div>`}
-function doRenTeam(old){const nw=document.getElementById('etNm').value.trim();if(!nw)return;const i=teams.indexOf(old);if(i<0)return;teams[i]=nw;users.forEach(u=>{if(u.team===old)u.team=nw});orders.forEach(o=>{if(o.team===old)o.team=nw});sv('cream_teams',teams);sv('cream_users',users);sv('cream_orders',orders);closeM();renderTeam();showSuc('✅','สำเร็จ!',`${old} → ${nw}`);setTimeout(hideSuc,1200)}
+function doRenTeam(old){const nw=document.getElementById('etNm').value.trim();if(!nw)return;const i=teams.indexOf(old);if(i<0)return;teams[i]=nw;users.forEach(u=>{if(u.team===old)u.team=nw});orders.forEach(o=>{if(o.team===old)o.team=nw});sv('cream_teams',teams);sv('cream_users',users);sv('cream_orders',orders);syncUsers();closeM();renderTeam();showSuc('✅','สำเร็จ!',`${old} → ${nw}`);setTimeout(hideSuc,1200)}
 function doDelTeam(nm){if(!confirm(`ลบ "${nm}"?`))return;teams=teams.filter(t=>t!==nm);sv('cream_teams',teams);closeM();renderTeam()}
 function closeM(){document.getElementById('modalC').innerHTML=''}
 let _ptTimer=null;
@@ -978,7 +1003,7 @@ function hideSuc(){document.getElementById('sucOv').style.display='none'}
 
 document.addEventListener('DOMContentLoaded',()=>{
   // === Auto-Update System ===
-  const APP_VER='v10.7';
+  const APP_VER='v10.9';
   window._APP_VER=APP_VER;
   // ล้าง cache เมื่อเวอร์ชันเปลี่ยน
   if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.removeItem('cream_products');localStorage.removeItem('cream_prodAssign');localStorage.setItem('cream_ver',APP_VER);console.log('Cache cleared for '+APP_VER)}
@@ -1010,7 +1035,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         const changed=JSON.stringify(sp)!==JSON.stringify(products);
         if(changed){products=sp;sv('cream_products',products);console.log('Products auto-refreshed:',products.length)}
       }
-      if(data.assign){const changed2=JSON.stringify(data.assign)!==JSON.stringify(productAssign);if(changed2){productAssign=data.assign;sv('cream_prodAssign',productAssign)}}
+      if(data.assign){const changed2=JSON.stringify(data.assign)!==JSON.stringify(productAssign);if(changed2){productAssign=data.assign;sv('cream_prodAssign',productAssign)}}if(data.users&&data.users.length>0){const changed3=JSON.stringify(data.users)!==JSON.stringify(users);if(changed3){users=data.users;sv('cream_users',users);console.log('Users auto-refreshed:',users.length)}}
     }catch(e){}
   },60000);
 
