@@ -353,7 +353,7 @@ function nav(p){
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('ac'));const el=document.getElementById('pg-'+p);if(el)el.classList.add('ac');
   document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('ac',b.dataset.p===p));
   document.getElementById('stickySubmit').style.display=p==='add'?'block':'none';
-  if(p==='home')updateHome();if(p==='add'){initAddPage();loadProductsFromSheets().then(()=>renderProdCards())}if(p==='orders'){if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}else{renderOrd()}}if(p==='dash'){buildDF();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}else{renderDash()}}if(p==='settings'){renderProdMgmt();renderProdAssign();renderTeam()}window.scrollTo(0,0);
+  if(p==='home')updateHome();if(p==='add'){initAddPage();loadProductsFromSheets().then(()=>renderProdCards())}if(p==='orders'){renderOrd();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}}if(p==='dash'){buildDF();renderDash();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}}if(p==='settings'){renderProdMgmt();renderProdAssign();renderTeam()}window.scrollTo(0,0);
 }
 
 // รวมออเดอร์จาก Sheets เข้า orders (สำหรับ boss)
@@ -999,10 +999,10 @@ function hideSuc(){document.getElementById('sucOv').style.display='none'}
 
 document.addEventListener('DOMContentLoaded',()=>{
   // === Auto-Update System ===
-  const APP_VER='v11.4';
+  const APP_VER='v11.6';
   window._APP_VER=APP_VER;
-  // ล้าง cache เมื่อเวอร์ชันเปลี่ยน
-  if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.removeItem('cream_products');localStorage.removeItem('cream_prodAssign');localStorage.setItem('cream_ver',APP_VER);console.log('Cache cleared for '+APP_VER)}
+  // อัปเดตเวอร์ชัน (ไม่ลบข้อมูลสินค้า)
+  if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.setItem('cream_ver',APP_VER);console.log('Updated to '+APP_VER)}
   // ลบ service worker เก่า
   if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(r=>{r.forEach(w=>w.unregister())})}
   users=ld('cream_users',DEFAULT_USERS);teams=ld('cream_teams',['ทีม A','ทีม B']);orders=ld('cream_orders',[]);products=ld('cream_products',DEFAULT_PRODUCTS);productAssign=ld('cream_prodAssign',{});
