@@ -332,7 +332,7 @@ function nav(p){
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('ac'));const el=document.getElementById('pg-'+p);if(el)el.classList.add('ac');
   document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('ac',b.dataset.p===p));
   document.getElementById('stickySubmit').style.display=p==='add'?'block':'none';
-  if(p==='home')updateHome();if(p==='add')initAddPage();if(p==='orders'){if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}else{renderOrd()}}if(p==='dash'){buildDF();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}else{renderDash()}}if(p==='settings'){renderProdMgmt();renderProdAssign();renderTeam()}window.scrollTo(0,0);
+  if(p==='home')updateHome();if(p==='add'){loadProductsFromSheets().then(()=>initAddPage()).catch(()=>initAddPage())}if(p==='orders'){if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}else{renderOrd()}}if(p==='dash'){buildDF();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}else{renderDash()}}if(p==='settings'){renderProdMgmt();renderProdAssign();renderTeam()}window.scrollTo(0,0);
 }
 
 // รวมออเดอร์จาก Sheets เข้า orders (สำหรับ boss)
@@ -958,14 +958,43 @@ function showSuc(ic,m,s){document.getElementById('sucIcon').textContent=ic;docum
 function hideSuc(){document.getElementById('sucOv').style.display='none'}
 
 document.addEventListener('DOMContentLoaded',()=>{
+  // === Auto-Update System ===
+  const APP_VER='v10.3';
+  window._APP_VER=APP_VER;
   // ล้าง cache เมื่อเวอร์ชันเปลี่ยน
-  const APP_VER='v10.2';if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.removeItem('cream_products');localStorage.removeItem('cream_prodAssign');localStorage.setItem('cream_ver',APP_VER);console.log('Cache cleared for '+APP_VER)}
-  // ลบ service worker เก่า (ถ้ามี)
+  if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.removeItem('cream_products');localStorage.removeItem('cream_prodAssign');localStorage.setItem('cream_ver',APP_VER);console.log('Cache cleared for '+APP_VER)}
+  // ลบ service worker เก่า
   if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(r=>{r.forEach(w=>w.unregister())})}
   users=ld('cream_users',DEFAULT_USERS);teams=ld('cream_teams',['ทีม A','ทีม B']);orders=ld('cream_orders',[]);products=ld('cream_products',DEFAULT_PRODUCTS);productAssign=ld('cream_prodAssign',{});
   checkSession();
   document.getElementById('loginPin').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
   document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPin').focus()});
+
+  // === Auto-Reload เมื่ออัปเดตระบบ (ตรวจทุก 30 วิ) ===
+  setInterval(async()=>{
+    try{
+      const res=await fetch(location.href+'?_ck='+Date.now(),{cache:'no-store'});
+      const html=await res.text();
+      const m=html.match(/APP_VER='([^']+)'/);
+      if(m&&m[1]!==APP_VER){console.log('New version:',m[1],'→ reload');location.reload(true)}
+    }catch(e){}
+  },30000);
+
+  // === Auto-Refresh สินค้าจาก Cloud ทุก 60 วิ (ไม่ต้อง logout) ===
+  setInterval(async()=>{
+    if(!cu)return;
+    try{
+      const res=await fetch(APPS_SCRIPT_URL);
+      const data=await res.json();
+      if(data.products&&data.products.length>0){
+        const sp=data.products.map(p=>({...p,img:p.img||''}));
+        const changed=JSON.stringify(sp)!==JSON.stringify(products);
+        if(changed){products=sp;sv('cream_products',products);console.log('Products auto-refreshed:',products.length);if(document.querySelector('.pg.ac')?.id==='pg-add')renderProdCards()}
+      }
+      if(data.assign){const changed2=JSON.stringify(data.assign)!==JSON.stringify(productAssign);if(changed2){productAssign=data.assign;sv('cream_prodAssign',productAssign)}}
+    }catch(e){}
+  },60000);
+
   // Keyboard-aware sticky submit bar
   if(window.visualViewport){
     const adjustSticky=()=>{
@@ -976,7 +1005,6 @@ document.addEventListener('DOMContentLoaded',()=>{
       const wh=window.innerHeight;
       const kbH=wh-vvh;
       if(kbH>100){
-        // keyboard is open
         ss.style.bottom=kbH+'px';
         bn.style.display='none';
       }else{
