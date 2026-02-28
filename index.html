@@ -702,7 +702,7 @@ function orderRow(o,i){const p=products.find(x=>x.id===o.productId);const an=use
 // ADD ORDER
 function initAddPage(){productAssign=ld('cream_prodAssign',{});const now=new Date();document.getElementById('oDate').textContent=fD(now);document.getElementById('oTime').textContent=fT(now);document.getElementById('addInfo').textContent=`${cu.name} • ${fD(now)}`;selProd=null;qty=1;window._slipData=null;renderProdCards();updateSummary();document.getElementById('priceSection').style.display='none';document.getElementById('inPrice').value='';document.getElementById('detailSection').style.display='none';document.getElementById('slipSection').style.display='none';document.getElementById('slipPreview').style.display='none';document.getElementById('slipUploadBtn').style.display='flex';document.getElementById('inDetail').value='';document.getElementById('inDetail').style.borderColor='rgba(180,140,100,.15)';document.getElementById('detailErr').textContent='';document.getElementById('phoneDetect').innerHTML='';document.getElementById('phoneDetect').style.padding='0';document.getElementById('phoneDetect').style.border='none';_lastPhoneState='';if(window._ti)clearInterval(window._ti);window._ti=setInterval(()=>{document.getElementById('oTime').textContent=fT(new Date())},1000);}
 function getMyProducts(){if(cu.role==='boss')return products;return products.filter(p=>{const a=productAssign[p.id];if(!a||a.length===0)return true;return a.includes(cu.email)})}
-function renderProdCards(){const myProds=getMyProducts();const allCount=products.length;const cols=myProds.length<=2?myProds.length:3;document.getElementById('prodCards').style.display='grid';document.getElementById('prodCards').style.gridTemplateColumns=`repeat(${cols},1fr)`;document.getElementById('prodCards').style.gap='8px';let notice='';if(cu.role!=='boss'&&myProds.length<allCount){notice=`<div style="grid-column:1/-1;text-align:center;font-size:11px;color:var(--bl2);padding:4px 0">🔒 หัวหน้ากำหนดกลุ่มสินค้าให้คุณ ${myProds.length} รายการ</div>`}else if(cu.role!=='boss'&&myProds.length===0){notice=`<div style="grid-column:1/-1;text-align:center;font-size:13px;color:var(--rd);padding:20px 0">⚠️ หัวหน้ายังไม่ได้กำหนดกลุ่มสินค้าให้คุณ</div>`}document.getElementById('prodCards').innerHTML=notice+myProds.map(p=>`<div class="prod-card ${selProd===p.id?'selected':''}" onclick="selectProd('${p.id}')"><div class="pcheck">✓</div><div class="pi">${p.img?`<img src="${p.img}" style="width:36px;height:36px;object-fit:cover;border-radius:10px">`:`<span style="font-size:11px;font-weight:700;color:var(--brown);line-height:1.2">${p.short||p.name||'?'}</span>`}</div><div class="pname">${p.short}</div></div>`).join('')}
+function renderProdCards(){const myProds=getMyProducts();const cols=myProds.length<=2?myProds.length:3;document.getElementById('prodCards').style.display='grid';document.getElementById('prodCards').style.gridTemplateColumns=`repeat(${cols},1fr)`;document.getElementById('prodCards').style.gap='8px';document.getElementById('prodCards').innerHTML=myProds.length===0?'<div style="grid-column:1/-1;text-align:center;font-size:13px;color:#aaa;padding:20px 0">ยังไม่มีสินค้า</div>':myProds.map(p=>`<div class="prod-card ${selProd===p.id?'selected':''}" onclick="selectProd('${p.id}')"><div class="pcheck">✓</div><div class="pname" style="font-size:13px;padding:4px 0">${p.name}</div></div>`).join('')}
 function selectProd(id){selProd=selProd===id?null:id;qty=1;renderProdCards();document.getElementById('priceSection').style.display=selProd?'block':'none';document.getElementById('detailSection').style.display=selProd?'block':'none';document.getElementById('slipSection').style.display=selProd?'block':'none';if(!selProd)document.getElementById('inPrice').value='';updateSummary();if(selProd){setTimeout(()=>{const el=document.getElementById('inPrice');if(el){el.scrollIntoView({behavior:'smooth',block:'nearest'});el.focus()}},250)}}
 function chgQty(d){qty=Math.max(1,qty+d);document.getElementById('qtyVal').textContent=qty;updateSummary()}
 function extractPhone(text){const m=text.match(/0\d[\d\s\-().]{7,14}\d/g);if(m){for(const raw of m){const d=raw.replace(/[\s\-().]/g,'');if(d.length===10&&/^0[2-9]/.test(d))return d}}const m2=text.replace(/[\s\-().]/g,'').match(/0[2-9]\d{8}(?!\d)/g);return m2?m2[0]:null}
@@ -812,12 +812,9 @@ function renderDash(){
 // ============================================
 function renderProdMgmt(){
   document.getElementById('prodMgmt').innerHTML=products.length===0?'<div style="text-align:center;padding:20px;color:#ccc">ยังไม่มีสินค้า</div>':products.map(p=>{
-    const assigned=productAssign[p.id]||[];
-    const assignLabel=assigned.length===0?'<span style="color:var(--gr);font-size:10px">ทุกคน</span>':assigned.map(e=>{const u=users.find(x=>x.email===e);return u?u.name:e}).join(', ');
     return`<div class="pm-card" onclick="showEditProduct('${p.id}')">
-      <div style="width:48px;height:48px;border-radius:14px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden">${p.img?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`:`<span style="font-size:11px;font-weight:700;color:var(--brown);line-height:1.2">${p.short||p.name||'?'}</span>`}</div>
-      <div style="flex:1"><div style="font-weight:700;font-size:14px">${p.name}</div><div style="font-size:11px;color:#aaa;margin-top:2px">${p.sku?'SKU: '+p.sku+' • ':''}กลุ่ม: ${p.sheet||'-'} • ${p.short}</div><div style="font-size:10px;color:var(--bl2);margin-top:2px">${assignLabel}</div></div>
-      <div style="text-align:right"><div style="font-weight:800;font-size:16px;color:var(--brown)">฿${p.price}</div><div style="font-size:10px;color:var(--bl2);margin-top:2px">แก้ไข →</div></div>
+      <div style="flex:1;font-weight:700;font-size:14px">${p.name}</div>
+      <div style="font-size:10px;color:var(--bl2)">แก้ไข →</div>
     </div>`}).join('');
 }
 
@@ -874,31 +871,12 @@ function genSKU(brand){
   return prefix+'-'+String(maxNum+1).padStart(3,'0');
 }
 function showAddProduct(){
-  const existingBrands=[...new Set(products.map(p=>p.sheet).filter(Boolean))];
-  const hasBrands=existingBrands.length>0;
   document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box">
     <div class="mf-title">เพิ่มสินค้าใหม่ <button class="mf-close" onclick="closeM()">✕</button></div>
-    <div style="font-size:13px;font-weight:600;color:#666;margin-bottom:6px">รูปสินค้า (ไม่บังคับ)</div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-      <div id="pImgPrev" style="width:72px;height:72px;border-radius:16px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px dashed #d4c4b0;flex-shrink:0"><span style="font-size:14px;color:#ccc">รูป</span></div>
-      <div style="flex:1"><input type="file" id="pImgFile" accept="image/*" style="display:none" onchange="prevProdImg(this,'pImgPrev','pImgData')"><button style="background:var(--cd);border:none;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:13px;font-weight:600;color:var(--brown);width:100%" onclick="document.getElementById('pImgFile').click()">เลือกรูป</button><div style="font-size:10px;color:#aaa;margin-top:4px">รองรับ JPG, PNG</div></div>
-    </div>
-    <input type="hidden" id="pImgData" value="">
-    <input type="hidden" id="pIcon" value="">
-    <div style="font-size:13px;font-weight:600;color:#666;margin-bottom:6px">กลุ่มสินค้า</div>
-    <select class="mf-select" id="pBrandSel" onchange="var v=this.value;document.getElementById('pBrandNew').style.display=v==='__new__'?'block':'none';autoFillSKU()">
-      ${hasBrands?existingBrands.map(b=>`<option value="${b}">${b}</option>`).join(''):''}
-      <option value="__new__" ${!hasBrands?'selected':''}>+ สร้างกลุ่มใหม่...</option>
-    </select>
-    <input class="mf-input" id="pBrandNew" placeholder="พิมพ์ชื่อกลุ่มใหม่" style="display:${hasBrands?'none':'block'}" oninput="autoFillSKU()">
-    <input class="mf-input" id="pSku" placeholder="SKU (สร้างอัตโนมัติ)" readonly style="background:#eee;color:#666">
-    <input class="mf-input" id="pName" placeholder="ชื่อสินค้า เช่น ครีมหลงเลย เซรั่ม">
-    <input class="mf-input" id="pShort" placeholder="ชื่อย่อ เช่น เซรั่ม">
-    <input class="mf-input" id="pPrice" placeholder="ราคา เช่น 290" type="number" inputmode="numeric">
+    <input class="mf-input" id="pName" placeholder="ชื่อสินค้า">
     <button class="mf-btn" onclick="doAddProduct()">เพิ่มสินค้า</button>
     <div class="lerr" id="pErr" style="margin-top:8px"></div>
   </div></div>`;
-  autoFillSKU();
 }
 function autoFillSKU(){
   const sel=document.getElementById('pBrandSel');
@@ -932,47 +910,21 @@ function prevProdImg(input,prevId,dataId){
 function removeProdImg(){document.getElementById('epImgData').value='__remove__';document.getElementById('epImgPrev').innerHTML='<span style="font-size:28px;color:#ccc">📷</span>';document.getElementById('epImgPrev').style.border='2px dashed #d4c4b0'}
 
 function doAddProduct(){
-  const icon=document.getElementById('pIcon').value||'';
-  const selBrand=document.getElementById('pBrandSel').value;
-  const brand=selBrand==='__new__'?document.getElementById('pBrandNew').value.trim():selBrand;
   const name=document.getElementById('pName').value.trim();
-  const short=document.getElementById('pShort').value.trim();
-  const price=parseInt(document.getElementById('pPrice').value)||0;
-  const img=document.getElementById('pImgData').value||'';
   const err=document.getElementById('pErr');
-  if(!brand||!name||!short||!price){err.textContent='กรอกข้อมูลให้ครบ (กลุ่ม, ชื่อ, ย่อ, ราคา)';return}
-  const sku=genSKU(brand);
-  const sheet=brand;
+  if(!name){err.textContent='กรอกชื่อสินค้า';return}
   const id='prod_'+Date.now();
-  const newProd={id,name,short,price,icon,sheet,sku,img:img||''};
+  const newProd={id,name,short:name,price:0,icon:'',sheet:name,sku:'',img:''};
   products.push(newProd);sv('cream_products',products);syncProducts();
   closeM();renderProdMgmt();
-  showSuc('','เพิ่มสินค้าสำเร็จ!',`${name} ฿${price} [${brand}] SKU: ${sku}`);setTimeout(hideSuc,2000);
+  showSuc('','เพิ่มสินค้าสำเร็จ!',name);setTimeout(hideSuc,2000);
 }
 
 function showEditProduct(id){
   const p=products.find(x=>x.id===id);if(!p)return;
-  const imgPrev=p.img?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-size:14px;color:#ccc">รูป</span>`;
-  const existingBrands=[...new Set(products.map(x=>x.sheet).filter(Boolean))];
   document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box">
     <div class="mf-title">แก้ไขสินค้า <button class="mf-close" onclick="closeM()">✕</button></div>
-    <div style="font-size:13px;font-weight:600;color:#666;margin-bottom:6px">รูปสินค้า</div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-      <div id="epImgPrev" style="width:72px;height:72px;border-radius:16px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid ${p.img?'var(--brown)':'#d4c4b0'};border-style:${p.img?'solid':'dashed'};flex-shrink:0">${imgPrev}</div>
-      <div style="flex:1"><input type="file" id="epImgFile" accept="image/*" style="display:none" onchange="prevProdImg(this,'epImgPrev','epImgData')"><button style="background:var(--cd);border:none;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:13px;font-weight:600;color:var(--brown);width:100%" onclick="document.getElementById('epImgFile').click()">เปลี่ยนรูป</button>${p.img?'<button style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--rd);margin-top:4px;width:100%" onclick="removeProdImg()">ลบรูป</button>':''}</div>
-    </div>
-    <input type="hidden" id="epImgData" value="">
-    <input type="hidden" id="epIcon" value="${p.icon||''}">
-    <div style="font-size:13px;font-weight:600;color:#666;margin-bottom:6px">กลุ่มสินค้า</div>
-    <select class="mf-select" id="epBrandSel" onchange="document.getElementById('epBrandNew').style.display=this.value==='__new__'?'block':'none'">
-      ${existingBrands.map(b=>`<option value="${b}" ${b===p.sheet?'selected':''}>${b}</option>`).join('')}
-      <option value="__new__">+ สร้างกลุ่มใหม่...</option>
-    </select>
-    <input class="mf-input" id="epBrandNew" placeholder="พิมพ์ชื่อกลุ่มใหม่" style="display:none">
-    <input class="mf-input" id="epSku" value="${p.sku||''}" placeholder="SKU" readonly style="background:#eee;color:#666">
     <input class="mf-input" id="epName" value="${p.name}" placeholder="ชื่อสินค้า">
-    <input class="mf-input" id="epShort" value="${p.short}" placeholder="ชื่อย่อ">
-    <input class="mf-input" id="epPrice" value="${p.price}" placeholder="ราคา" type="number">
     <button class="mf-btn" onclick="doEditProduct('${id}')">บันทึก</button>
     <button class="mf-btn danger" onclick="doDeleteProduct('${id}')">ลบสินค้า</button>
   </div></div>`;
@@ -980,13 +932,9 @@ function showEditProduct(id){
 
 function doEditProduct(id){
   const i=products.findIndex(x=>x.id===id);if(i<0)return;
-  const imgData=document.getElementById('epImgData').value;
-  let img=products[i].img||'';
-  if(imgData==='__remove__')img='';
-  else if(imgData)img=imgData;
-  const epSelBrand=document.getElementById('epBrandSel').value;
-  const epBrand=epSelBrand==='__new__'?document.getElementById('epBrandNew').value.trim():epSelBrand;
-  products[i]={...products[i],icon:'',name:document.getElementById('epName').value.trim(),short:document.getElementById('epShort').value.trim(),price:parseInt(document.getElementById('epPrice').value)||0,img:img,sheet:epBrand||products[i].sheet};
+  const name=document.getElementById('epName').value.trim();
+  if(!name)return;
+  products[i]={...products[i],name:name,short:name,sheet:name};
   sv('cream_products',products);syncProducts();closeM();renderProdMgmt();showSuc('','แก้ไขสำเร็จ!','');setTimeout(hideSuc,1200);
 }
 
@@ -1041,7 +989,7 @@ function hideSuc(){document.getElementById('sucOv').style.display='none'}
 
 document.addEventListener('DOMContentLoaded',()=>{
   // === Auto-Update System ===
-  const APP_VER='v12.3';
+  const APP_VER='v12.4';
   window._APP_VER=APP_VER;
   // อัปเดตเวอร์ชัน (ไม่ลบข้อมูลสินค้า)
   if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.setItem('cream_ver',APP_VER);console.log('Updated to '+APP_VER)}
