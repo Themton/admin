@@ -241,22 +241,20 @@ body.boss-mode #stickySubmit button{max-width:600px}
   <div style="font-weight:800;font-size:20px;margin-top:14px;margin-bottom:6px">📊 แดชบอร์ด</div>
   <div class="fc" id="pF"></div><div id="dtFW" style="display:none"><div class="fc" id="dtF"></div></div><div id="dashC"></div>
 </div>
-<!-- SETTINGS (Boss: products + team) -->
+<!-- SETTINGS (Boss: product names + team) -->
 <div class="pg" id="pg-settings">
   <div style="font-weight:800;font-size:20px;margin-top:14px;margin-bottom:14px">⚙️ ตั้งค่า</div>
-  <!-- PRODUCT MANAGEMENT -->
+  <!-- CLOUD SYNC -->
+  <div style="display:flex;gap:6px;margin-bottom:16px">
+    <button onclick="forceSyncToSheets()" style="flex:1;background:linear-gradient(135deg,#4CAF50,#66BB6A);color:#fff;border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">☁️ Sync ขึ้น Cloud</button>
+    <button onclick="testConnection()" style="flex:1;background:linear-gradient(135deg,#2196F3,#42A5F5);color:#fff;border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 ทดสอบ</button>
+  </div>
+  <!-- PRODUCT NAMES -->
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <div style="font-weight:700;font-size:16px">🧴 จัดการสินค้า</div>
-    <div style="display:flex;gap:6px"><button onclick="forceSyncToSheets()" style="background:linear-gradient(135deg,#4CAF50,#66BB6A);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">☁️ Sync ขึ้น Cloud</button><button onclick="testConnection()" style="background:linear-gradient(135deg,#2196F3,#42A5F5);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 ทดสอบ</button></div>
-    <button style="background:linear-gradient(135deg,var(--brown),var(--bl));border:none;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#fff" onclick="showAddProduct()">+ เพิ่มสินค้า</button>
+    <div style="font-weight:700;font-size:16px">🧴 ชื่อสินค้า</div>
+    <button style="background:linear-gradient(135deg,var(--brown),var(--bl));border:none;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#fff" onclick="showAddProduct()">+ เพิ่ม</button>
   </div>
   <div id="prodMgmt"></div>
-  <!-- PRODUCT ASSIGNMENT (Boss only) -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:24px;margin-bottom:12px">
-    <div style="font-weight:700;font-size:16px">🔗 กำหนดสินค้า → แอดมิน</div>
-  </div>
-  <div style="font-size:12px;color:#999;margin-bottom:10px">เลือกว่าสินค้าไหนให้แอดมินคนไหนขาย (ไม่เลือก = ทุกคนเห็น)</div>
-  <div id="prodAssignC"></div>
   <!-- TEAM MANAGEMENT -->
   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:24px;margin-bottom:12px">
     <div style="font-weight:700;font-size:16px">👥 จัดการทีม</div>
@@ -290,7 +288,7 @@ const DEFAULT_PRODUCTS=[];
 const ICONS=[];
 
 let users=[],orders=[],products=[],cu=null,teams=[];
-let productAssign={}; // {productId: [email1,email2]}
+let productAssign={};
 let assignDirty=false;
 let selProd=null,qty=1;
 let fProd="ทั้งหมด",fAdmin="ทั้งหมด",dPeriod="วันนี้",dTeam="ทั้งหมด";
@@ -339,7 +337,7 @@ function showApp(){
   nav(cu.role==='boss'?'home':'add');
   // Boss: sync ทุกอย่างขึ้น Cloud อัตโนมัติทุกครั้ง
   if(cu.role==='boss'){
-    setTimeout(()=>{syncProducts();syncUsers();syncAssign();console.log('Auto-sync ALL to Cloud')},1000);
+    setTimeout(()=>{syncProducts();syncUsers();console.log('Auto-sync ALL to Cloud')},1000);
   }
   // โหลด Cloud ใน background
   loadProductsFromSheets().then(()=>{if(cu.role!=='boss'&&products.length>0)renderProdCards()});
@@ -367,7 +365,7 @@ function nav(p){
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('ac'));const el=document.getElementById('pg-'+p);if(el)el.classList.add('ac');
   document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('ac',b.dataset.p===p));
   document.getElementById('stickySubmit').style.display=p==='add'?'block':'none';
-  if(p==='home')updateHome();if(p==='add'){initAddPage();loadProductsFromSheets().then(()=>renderProdCards())}if(p==='orders'){renderOrd();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}}if(p==='dash'){buildDF();renderDash();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}}if(p==='settings'){renderProdMgmt();renderProdAssign();renderTeam()}window.scrollTo(0,0);
+  if(p==='home')updateHome();if(p==='add'){initAddPage();loadProductsFromSheets().then(()=>renderProdCards())}if(p==='orders'){renderOrd();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}}if(p==='dash'){buildDF();renderDash();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}}if(p==='settings'){renderProdMgmt();renderTeam()}window.scrollTo(0,0);
 }
 
 // รวมออเดอร์จาก Sheets เข้า orders (สำหรับ boss)
@@ -377,17 +375,14 @@ function mergeSheetsOrders(){
     return !orders.find(o=>o.date===so.date&&o.time===so.time&&(o.addedBy===so.adminEmail||o.adminName===so.adminName)&&o.amount===so.amount);
   });
   newOrders.forEach(so=>{
-    const p=products.find(x=>x.short===so.productName||x.name===so.productName||x.name.indexOf(so.productName)!==-1);
     orders.push({
       id:Date.now()+Math.random(),
       dailyNo:so.dailyNo||0,
       date:so.date,
       time:so.time||'',
-      productId:p?p.id:(so.productName||''),
       productName:so.productName||'',
-      productSheet:so.brand||'',
-      price:so.amount/(so.qty||1),
-      qty:so.qty||1,
+      price:so.amount||0,
+      qty:1,
       amount:so.amount||0,
       phone:so.phone||'',
       detail:so.detail||'',
@@ -443,14 +438,14 @@ function renderAdminHome(td){
   document.getElementById('hTotal').textContent=`฿${tt.toLocaleString()}`;
   document.getElementById('hSub').textContent=`ยอดขายวันนี้ • ${to.length} ออเดอร์`;
   const myP=getMyProducts();
-  if(myP.length===0){document.getElementById('homeStats').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px"><div style="font-size:40px;margin-bottom:8px">📦</div><div style="font-size:14px;color:#999;line-height:1.6">ยังไม่มีสินค้า<br><span style="font-size:12px">รอหัวหน้า Sync สินค้าขึ้น Cloud<br>แล้ว Logout แล้ว Login ใหม่</span></div></div>';return}
-  const cols=myP.length<=3?myP.length:3;
+  const prodCounts={};to.forEach(o=>{const n=o.productName||'อื่นๆ';prodCounts[n]=(prodCounts[n]||0)+1});
+  const prodNames=Object.keys(prodCounts);
+  if(prodNames.length===0&&myP.length===0){document.getElementById('homeStats').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px"><div style="font-size:40px;margin-bottom:8px">📦</div><div style="font-size:14px;color:#999;line-height:1.6">ยังไม่มีออเดอร์วันนี้</div></div>';return}
+  const cols=prodNames.length<=3?Math.max(prodNames.length,1):3;
   document.getElementById('homeStats').style.gridTemplateColumns=`repeat(${cols},1fr)`;
-  document.getElementById('homeStats').innerHTML=myP.map(p=>{
-    const sum=to.filter(o=>o.productId===p.id).reduce((s,o)=>s+o.qty,0);
-    const imgEl=p.img?`<img src="${p.img}" style="width:40px;height:40px;object-fit:cover;border-radius:10px">`:
-      `<span style="font-size:11px;font-weight:700;color:var(--brown);line-height:1.2">${p.short||p.name||'?'}</span>`;
-    return`<div class="cd" style="text-align:center;padding:12px"><div>${imgEl}</div><div style="font-weight:800;font-size:20px;color:var(--brown);margin-top:4px">${sum}</div><div style="font-size:10px;color:#aaa">${p.short}</div></div>`;
+  document.getElementById('homeStats').innerHTML=prodNames.map(n=>{
+    const amt=to.filter(o=>o.productName===n).reduce((s,o)=>s+o.amount,0);
+    return`<div class="cd" style="text-align:center;padding:12px"><div style="font-weight:800;font-size:20px;color:var(--brown)">${prodCounts[n]}</div><div style="font-size:10px;color:#aaa">${n}</div><div style="font-size:11px;color:var(--brown);font-weight:600">฿${amt.toLocaleString()}</div></div>`;
   }).join('');
   document.getElementById('adminReport').style.display='none';
   
@@ -697,11 +692,11 @@ function renderBossHome(td){
     const rc=to.slice(0,10);document.getElementById('recent').innerHTML=rc.map((o,i)=>orderRow(o,i)).join('');
   }
 }
-function orderRow(o,i){const p=products.find(x=>x.id===o.productId);const an=users.find(u=>u.email===o.addedBy);const by=cu.role==='boss'&&an?`<span style="font-size:10px;color:var(--bl2);font-weight:600">${an.name}</span> • `:'';const det=o.detail?`<div style="font-size:11px;color:#666;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.detail}</div>`:'';const ph=o.phone?`<div style="font-size:11px;color:#4CAF50;margin-top:1px;font-weight:600">${o.phone.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3')}</div>`:'';const imgEl=p?.img?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`:`<span style="font-size:10px;font-weight:700;color:var(--brown);line-height:1.2">${p?.short||p?.name||'?'}</span>`;return`<div style="background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:8px;border:1px solid rgba(180,140,100,.06);display:flex;align-items:center;gap:10px;animation:fadeSlideIn .3s ease ${i*.04}s both"><div style="width:40px;height:40px;border-radius:12px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;overflow:hidden">${imgEl}</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">${p?.name||o.productId}${o.qty>1?' x'+o.qty:''}</div>${ph}${det}<div style="font-size:11px;color:#aaa;margin-top:2px">${by}#${o.dailyNo} • ${o.time}${o.team&&o.team!=='ทั้งหมด'?' • '+o.team:''}</div></div><div style="font-weight:800;font-size:16px;color:var(--brown)">฿${o.amount.toLocaleString()}</div></div>`}
+function orderRow(o,i){const an=users.find(u=>u.email===o.addedBy);const by=cu.role==='boss'&&an?`<span style="font-size:10px;color:var(--bl2);font-weight:600">${an.name}</span> • `:'';const det=o.detail?`<div style="font-size:11px;color:#666;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.detail}</div>`:'';const ph=o.phone?`<div style="font-size:11px;color:#4CAF50;margin-top:1px;font-weight:600">${o.phone.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3')}</div>`:'';return`<div style="background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:8px;border:1px solid rgba(180,140,100,.06);display:flex;align-items:center;gap:10px;animation:fadeSlideIn .3s ease ${i*.04}s both"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">${o.productName||'สินค้า'}</div>${ph}${det}<div style="font-size:11px;color:#aaa;margin-top:2px">${by}#${o.dailyNo} • ${o.time}${o.team&&o.team!=='ทั้งหมด'?' • '+o.team:''}</div></div><div style="font-weight:800;font-size:16px;color:var(--brown)">฿${o.amount.toLocaleString()}</div></div>`}
 
 // ADD ORDER
-function initAddPage(){productAssign=ld('cream_prodAssign',{});const now=new Date();document.getElementById('oDate').textContent=fD(now);document.getElementById('oTime').textContent=fT(now);document.getElementById('addInfo').textContent=`${cu.name} • ${fD(now)}`;selProd=null;qty=1;window._slipData=null;renderProdCards();updateSummary();document.getElementById('priceSection').style.display='none';document.getElementById('inPrice').value='';document.getElementById('detailSection').style.display='none';document.getElementById('slipSection').style.display='none';document.getElementById('slipPreview').style.display='none';document.getElementById('slipUploadBtn').style.display='flex';document.getElementById('inDetail').value='';document.getElementById('inDetail').style.borderColor='rgba(180,140,100,.15)';document.getElementById('detailErr').textContent='';document.getElementById('phoneDetect').innerHTML='';document.getElementById('phoneDetect').style.padding='0';document.getElementById('phoneDetect').style.border='none';_lastPhoneState='';if(window._ti)clearInterval(window._ti);window._ti=setInterval(()=>{document.getElementById('oTime').textContent=fT(new Date())},1000);}
-function getMyProducts(){if(cu.role==='boss')return products;return products.filter(p=>{const a=productAssign[p.id];if(!a||a.length===0)return true;return a.includes(cu.email)})}
+function initAddPage(){const now=new Date();document.getElementById('oDate').textContent=fD(now);document.getElementById('oTime').textContent=fT(now);document.getElementById('addInfo').textContent=`${cu.name} • ${fD(now)}`;selProd=null;qty=1;window._slipData=null;renderProdCards();updateSummary();document.getElementById('priceSection').style.display='none';document.getElementById('inPrice').value='';document.getElementById('detailSection').style.display='none';document.getElementById('slipSection').style.display='none';document.getElementById('slipPreview').style.display='none';document.getElementById('slipUploadBtn').style.display='flex';document.getElementById('inDetail').value='';document.getElementById('inDetail').style.borderColor='rgba(180,140,100,.15)';document.getElementById('detailErr').textContent='';document.getElementById('phoneDetect').innerHTML='';document.getElementById('phoneDetect').style.padding='0';document.getElementById('phoneDetect').style.border='none';_lastPhoneState='';if(window._ti)clearInterval(window._ti);window._ti=setInterval(()=>{document.getElementById('oTime').textContent=fT(new Date())},1000);}
+function getMyProducts(){return products}
 function renderProdCards(){const myProds=getMyProducts();const cols=myProds.length<=2?myProds.length:3;document.getElementById('prodCards').style.display='grid';document.getElementById('prodCards').style.gridTemplateColumns=`repeat(${cols},1fr)`;document.getElementById('prodCards').style.gap='8px';document.getElementById('prodCards').innerHTML=myProds.length===0?'<div style="grid-column:1/-1;text-align:center;font-size:13px;color:#aaa;padding:20px 0">ยังไม่มีสินค้า</div>':myProds.map(p=>`<div class="prod-card ${selProd===p.id?'selected':''}" onclick="selectProd('${p.id}')"><div class="pcheck">✓</div><div class="pname" style="font-size:13px;padding:4px 0">${p.name}</div></div>`).join('')}
 function selectProd(id){selProd=selProd===id?null:id;qty=1;renderProdCards();document.getElementById('priceSection').style.display=selProd?'block':'none';document.getElementById('detailSection').style.display=selProd?'block':'none';document.getElementById('slipSection').style.display=selProd?'block':'none';if(!selProd)document.getElementById('inPrice').value='';updateSummary();if(selProd){setTimeout(()=>{const el=document.getElementById('inPrice');if(el){el.scrollIntoView({behavior:'smooth',block:'nearest'});el.focus()}},250)}}
 function chgQty(d){qty=Math.max(1,qty+d);document.getElementById('qtyVal').textContent=qty;updateSummary()}
@@ -756,27 +751,26 @@ function checkDetail(){
   else{err.textContent='';document.getElementById('inDetail').style.borderColor='var(--gr)'}
   updateSummary();
 }
-async function submitOrd(){if(!selProd)return;const p=products.find(x=>x.id===selProd);const price=parseFloat(document.getElementById('inPrice').value)||0;if(!price){document.getElementById('inPrice').focus();return}const detail=document.getElementById('inDetail').value.trim();if(!detail){document.getElementById('detailErr').textContent='⚠️ กรุณากรอกรายละเอียดก่อนบันทึก';document.getElementById('inDetail').style.borderColor='var(--rd)';document.getElementById('inDetail').focus();return}const phone=extractPhone(detail)||'';if(!phone){document.getElementById('inDetail').focus();checkDetail();const pr=analyzePhone(detail);if(pr.s==='none')showPhoneToast('err','❌','ไม่พบเบอร์โทร!','กรุณาใส่เบอร์โทร 10 หลัก ขึ้นต้น 0');return}const now=new Date(),td=fD(now);const btn=document.getElementById('subBtn');btn.disabled=true;btn.textContent='⏳ กำลังบันทึก...';const slip=window._slipData||'';const o={id:Date.now(),dailyNo:getDailyNo(td),date:td,time:fT(now),productId:p.id,productName:p.name,productSheet:p.sheet,price:price,qty:1,amount:price,phone:phone,detail:detail,slip:slip?'มีสลิป':'',addedBy:cu.email,adminName:cu.name,team:cu.team};orders.unshift(o);sv('cream_orders',orders);sendToSheets(o,slip);selProd=null;qty=1;initAddPage();showSuc('✅','บันทึกสำเร็จ!',`${p.short} ฿${price.toLocaleString()}${phone?' | 📞'+phone:''}${slip?' | 📸สลิป':''}`);setTimeout(hideSuc,800)}
+async function submitOrd(){if(!selProd)return;const p=products.find(x=>x.id===selProd);const price=parseFloat(document.getElementById('inPrice').value)||0;if(!price){document.getElementById('inPrice').focus();return}const detail=document.getElementById('inDetail').value.trim();if(!detail){document.getElementById('detailErr').textContent='⚠️ กรุณากรอกรายละเอียดก่อนบันทึก';document.getElementById('inDetail').style.borderColor='var(--rd)';document.getElementById('inDetail').focus();return}const phone=extractPhone(detail)||'';if(!phone){document.getElementById('inDetail').focus();checkDetail();const pr=analyzePhone(detail);if(pr.s==='none')showPhoneToast('err','❌','ไม่พบเบอร์โทร!','กรุณาใส่เบอร์โทร 10 หลัก ขึ้นต้น 0');return}const now=new Date(),td=fD(now);const btn=document.getElementById('subBtn');btn.disabled=true;btn.textContent='⏳ กำลังบันทึก...';const slip=window._slipData||'';const o={id:Date.now(),dailyNo:getDailyNo(td),date:td,time:fT(now),productName:p.name,price:price,qty:1,amount:price,phone:phone,detail:detail,slip:slip?'มีสลิป':'',addedBy:cu.email,adminName:cu.name,team:cu.team};orders.unshift(o);sv('cream_orders',orders);sendToSheets(o,slip);selProd=null;qty=1;initAddPage();showSuc('✅','บันทึกสำเร็จ!',`${p.name} ฿${price.toLocaleString()}${phone?' | 📞'+phone:''}${slip?' | 📸สลิป':''}`);setTimeout(hideSuc,800)}
 
 // SEND TO SHEETS
-async function sendToSheets(o,slip){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;try{const p=products.find(x=>x.id===o.productId);const body=JSON.stringify({action:"addOrder",...o,productShort:p?p.short:o.productName,phone:o.phone||"",slip:slip||""});await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body});console.log("Order sent to Sheets")}catch(e){console.log("Sheets:",e)}}
+async function sendToSheets(o,slip){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;try{const body=JSON.stringify({action:"addOrder",id:o.id,dailyNo:o.dailyNo,date:o.date,time:o.time,productName:o.productName,price:o.price,amount:o.amount,phone:o.phone||"",detail:o.detail,slip:slip||"",addedBy:o.addedBy,adminName:o.adminName,team:o.team});await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body});console.log("Order sent to Sheets")}catch(e){console.log("Sheets:",e)}}
 
 // SYNC สินค้าไป Google Sheets
-function syncProducts(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;const body=JSON.stringify({action:"saveProducts",products:products.map(p=>({id:p.id,name:p.name,short:p.short,price:p.price,icon:p.icon||"",sheet:p.sheet,sku:p.sku||"",img:p.img||""}))});fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body}).then(()=>console.log("SyncProducts sent")).catch(e=>console.log("SyncProducts err:",e))}
-function syncAssign(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;const body=JSON.stringify({action:"saveAssign",assign:productAssign});fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body}).then(()=>console.log("SyncAssign sent")).catch(e=>console.log("SyncAssign err:",e))}
+function syncProducts(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;const body=JSON.stringify({action:"saveProducts",products:products.map(p=>({id:p.id,name:p.name}))});fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body}).then(()=>console.log("SyncProducts sent")).catch(e=>console.log("SyncProducts err:",e))}
 function syncUsers(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;const body=JSON.stringify({action:"saveUsers",users:users.map(u=>({email:u.email,pin:u.pin,name:u.name,role:u.role,team:u.team}))});fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body}).then(()=>console.log("SyncUsers sent")).catch(e=>console.log("SyncUsers err:",e))}
-async function forceSyncToSheets(){if(products.length===0){showSuc('⚠️','ไม่มีสินค้า','เพิ่มสินค้าก่อน');setTimeout(hideSuc,1500);return}showSuc('☁️','กำลัง Sync...','อัปโหลดสินค้า '+products.length+' รายการ');try{const body=JSON.stringify({action:"saveProducts",products:products.map(p=>({id:p.id,name:p.name,short:p.short,price:p.price,icon:p.icon||"",sheet:p.sheet,sku:p.sku||"",img:p.img||""}))});await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body});syncAssign();syncUsers();showSuc('✅','Sync สำเร็จ!','สินค้า '+products.length+' รายการ อัปโหลดแล้ว\nรอ 5 วิ แล้วให้แอดมิน logout/login ใหม่');setTimeout(hideSuc,4000)}catch(e){showSuc('❌','Sync ไม่สำเร็จ',e.message||'ลองใหม่');setTimeout(hideSuc,3000)}}
+async function forceSyncToSheets(){showSuc('☁️','กำลัง Sync...','อัปโหลดข้อมูล');try{syncProducts();syncUsers();showSuc('✅','Sync สำเร็จ!','สินค้า '+products.length+' รายการ\nรอ 5 วิ แล้วให้แอดมิน logout/login ใหม่');setTimeout(hideSuc,4000)}catch(e){showSuc('❌','Sync ไม่สำเร็จ',e.message||'ลองใหม่');setTimeout(hideSuc,3000)}}
 async function testConnection(){showSuc('🔍','กำลังทดสอบ...','เชื่อมต่อ Google Sheets');try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();const pCount=data.products?data.products.length:0;const oCount=data.orders?data.orders.length:0;showSuc('✅','เชื่อมต่อสำเร็จ!','สินค้าใน Cloud: '+pCount+' รายการ\nออเดอร์วันนี้: '+oCount+' รายการ');setTimeout(hideSuc,4000)}catch(e){showSuc('❌','เชื่อมต่อไม่ได้',e.message||'ตรวจสอบ URL');setTimeout(hideSuc,3000)}}
 
 // โหลดสินค้าจาก Sheets (ใช้ตอน login)
-async function loadProductsFromSheets(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();console.log("Sheets response:",JSON.stringify(data).substring(0,300));if(data.products&&data.products.length>0){const sp=data.products.map(p=>({...p,img:p.img||''}));products=sp;sv('cream_products',products);console.log("Loaded "+products.length+" products from Sheets")}else{console.log("No products in Sheets. Local:"+products.length);if(cu&&cu.role==='boss'&&products.length>0){console.log("Boss auto-sync products to Sheets");syncProducts();syncAssign()}}if(data.assign){productAssign=data.assign;sv('cream_prodAssign',productAssign)}if(data.users&&data.users.length>0){users=data.users;sv('cream_users',users);console.log("Loaded "+users.length+" users from Sheets")}else if(cu&&cu.role==='boss'&&users.length>0){syncUsers()}}catch(e){console.log("LoadProd error:",e.message||e)}}
+async function loadProductsFromSheets(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();if(data.products&&data.products.length>0){products=data.products.map(p=>({id:p.id,name:p.name,short:p.name,price:0,icon:'',sheet:p.name,sku:'',img:''}));sv('cream_products',products)}else if(cu&&cu.role==='boss'&&products.length>0){syncProducts()}if(data.users&&data.users.length>0){users=data.users;sv('cream_users',users)}else if(cu&&cu.role==='boss'&&users.length>0){syncUsers()}}catch(e){console.log("LoadProd error:",e.message||e)}}
 
 // ORDERS
 function renderOrd(){
-  document.getElementById('prodFilter').innerHTML=['ทั้งหมด',...products.map(p=>p.short)].map(p=>`<button class="fch ${fProd===p?'ac':''}" onclick="fProd='${p}';renderOrd()">${p}</button>`).join('');
+  document.getElementById('prodFilter').innerHTML=['ทั้งหมด',...[...new Set(orders.map(o=>o.productName).filter(Boolean))]].map(p=>`<button class="fch ${fProd===p?'ac':''}" onclick="fProd='${p}';renderOrd()">${p}</button>`).join('');
   const afw=document.getElementById('adminFW');
   if(cu.role==='boss'){afw.style.display='block';document.getElementById('adminF').innerHTML=['ทั้งหมด',...users.filter(u=>u.role==='admin').map(u=>u.name)].map(a=>`<button class="fch ${fAdmin===a?'ac':''}" onclick="fAdmin='${a}';renderOrd()">${a}</button>`).join('')}else{afw.style.display='none'}
-  let v=getVO();if(fProd!=='ทั้งหมด'){const pid=products.find(p=>p.short===fProd);if(pid)v=v.filter(o=>o.productId===pid.id)}if(cu.role==='boss'&&fAdmin!=='ทั้งหมด'){const au=users.find(u=>u.name===fAdmin);if(au)v=v.filter(o=>o.addedBy===au.email)}
+  let v=getVO();if(fProd!=='ทั้งหมด'){v=v.filter(o=>o.productName===fProd)}if(cu.role==='boss'&&fAdmin!=='ทั้งหมด'){const au=users.find(u=>u.name===fAdmin);if(au)v=v.filter(o=>o.addedBy===au.email)}
   document.getElementById('oCount').textContent=`${v.length} รายการ`;document.getElementById('oList').innerHTML=v.length===0?'<div style="text-align:center;padding:40px 0;color:#ccc"><div style="font-size:40px">📋</div><div style="margin-top:8px">ไม่พบรายการ</div></div>':v.map((o,i)=>orderRow(o,i)).join('');
 }
 
@@ -795,12 +789,12 @@ function renderDash(){
   else if(dPeriod==='7 วัน'){const d7=[];for(let i=0;i<7;i++){const x=new Date(now);x.setDate(x.getDate()-i);d7.push(fD(x))}pd=d.filter(o=>d7.includes(o.date))}
   else if(dPeriod==='เดือนนี้')pd=d.filter(o=>gMK(o.date)===tm);
   const tr=pd.reduce((s,o)=>s+o.amount,0),tc=pd.length;
-  const prodB={};pd.forEach(o=>{prodB[o.productId]=(prodB[o.productId]||{q:0,a:0});prodB[o.productId].q+=o.qty;prodB[o.productId].a+=o.amount});
+  const prodB={};pd.forEach(o=>{const n=o.productName||'อื่นๆ';prodB[n]=(prodB[n]||{q:0,a:0});prodB[n].q+=o.qty;prodB[n].a+=o.amount});
   const admB={};pd.forEach(o=>{admB[o.addedBy]=(admB[o.addedBy]||{q:0,a:0});admB[o.addedBy].q+=o.qty;admB[o.addedBy].a+=o.amount});
   const dd=[];for(let i=6;i>=0;i--){const x=new Date(now);x.setDate(x.getDate()-i);const ds=fD(x);dd.push({d:ds.substring(0,5),t:d.filter(o=>o.date===ds).reduce((s,o)=>s+o.amount,0)})}const mx=Math.max(...dd.map(x=>x.t),1);
   const mB={};d.forEach(o=>{const mk=gMK(o.date);mB[mk]=(mB[mk]||0)+o.amount});
   let h=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;margin-bottom:16px"><div style="border-radius:18px;padding:20px 16px;background:linear-gradient(145deg,var(--brown),var(--bl));position:relative;overflow:hidden"><div style="position:absolute;top:-10px;right:-5px;font-size:50px;opacity:.15">💰</div><div style="font-size:11px;color:rgba(255,255,255,.7)">${dPeriod}</div><div style="font-weight:800;font-size:24px;color:#fff;margin-top:4px">฿${tr.toLocaleString()}</div><div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px">${tc} ออเดอร์</div></div><div style="border-radius:18px;padding:20px 16px;background:linear-gradient(145deg,var(--bp),#E8C9A0);position:relative;overflow:hidden"><div style="position:absolute;top:-10px;right:-5px;font-size:50px;opacity:.15">📦</div><div style="font-size:11px;color:rgba(255,255,255,.7)">จำนวน</div><div style="font-weight:800;font-size:24px;color:#fff;margin-top:4px">${pd.reduce((s,o)=>s+o.qty,0)} ชิ้น</div></div></div>`;
-  h+=`<div class="cd" style="border-radius:18px;padding:18px;margin-bottom:14px"><div style="font-weight:700;font-size:14px;margin-bottom:12px">ตามสินค้า</div>${products.map(p=>{const x=prodB[p.id]||{q:0,a:0};const imgEl=p.img?`<img src="${p.img}" style="width:28px;height:28px;object-fit:cover;border-radius:8px">`:`<span style="font-size:10px;font-weight:700;color:var(--brown);line-height:1.2">${p.short||p.name||'?'}</span>`;return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#faf7f3;border-radius:10px;margin-bottom:6px">${imgEl}<div style="flex:1"><div style="font-size:13px;font-weight:600">${p.short}</div><div style="font-size:11px;color:#aaa">${x.q} ชิ้น</div></div><span style="font-weight:700;font-size:15px;color:var(--brown)">฿${x.a.toLocaleString()}</span></div>`}).join('')}</div>`;
+  h+=`<div class="cd" style="border-radius:18px;padding:18px;margin-bottom:14px"><div style="font-weight:700;font-size:14px;margin-bottom:12px">ตามสินค้า</div>${Object.keys(prodB).map(n=>{const x=prodB[n];return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#faf7f3;border-radius:10px;margin-bottom:6px"><div style="flex:1"><div style="font-size:13px;font-weight:600">${n}</div><div style="font-size:11px;color:#aaa">${x.q} ชิ้น</div></div><span style="font-weight:700;font-size:15px;color:var(--brown)">฿${x.a.toLocaleString()}</span></div>`}).join('')}</div>`;
   h+=`<div class="cd" style="border-radius:18px;padding:18px;margin-bottom:14px"><div style="font-weight:700;font-size:14px;margin-bottom:14px">📈 ยอด 7 วัน</div><div style="display:flex;align-items:flex-end;gap:6px;height:100px">${dd.map(x=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="font-size:9px;font-weight:700;color:var(--brown)">${x.t>0?'฿'+x.t.toLocaleString():''}</div><div style="width:100%;background:linear-gradient(0deg,var(--brown),var(--bl));border-radius:6px 6px 0 0;height:${Math.max(4,x.t/mx*70)}px"></div><div style="font-size:9px;color:#aaa">${x.d}</div></div>`).join('')}</div></div>`;
   if(Object.keys(mB).length>0)h+=`<div class="cd" style="border-radius:18px;padding:18px;margin-bottom:14px"><div style="font-weight:700;font-size:14px;margin-bottom:12px">📅 รายเดือน</div>${Object.entries(mB).sort((a,b)=>b[0].localeCompare(a[0])).map(([mk,t])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f5f0eb"><span style="font-size:13px;color:#555">${gMN(mk)}</span><span style="font-weight:700;color:var(--brown)">฿${t.toLocaleString()}</span></div>`).join('')}</div>`;
   if(cu.role==='boss'&&Object.keys(admB).length>0)h+=`<div class="cd" style="border-radius:18px;padding:18px"><div style="font-weight:700;font-size:14px;margin-bottom:12px">👤 ตามแอดมิน</div>${Object.entries(admB).sort((a,b)=>b[1].a-a[1].a).map(([e,x],i)=>{const u=users.find(y=>y.email===e);return`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#faf7f3;border-radius:10px;margin-bottom:6px"><div style="width:28px;height:28px;border-radius:8px;background:${['#8B5E3C','#C4956A','#D4A574','#f59e0b','#4CAF50'][i%5]};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:11px">${i+1}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${u?.name||e}</div><div style="font-size:10px;color:#aaa">${u?.team||''} • ${x.q} ชิ้น</div></div><span style="font-weight:700;color:var(--brown)">฿${x.a.toLocaleString()}</span></div>`}).join('')}</div>`;
@@ -818,58 +812,6 @@ function renderProdMgmt(){
     </div>`}).join('');
 }
 
-function renderProdAssign(){
-  const admins=users.filter(u=>u.role==='admin');
-  if(products.length===0||admins.length===0){document.getElementById('prodAssignC').innerHTML='<div style="text-align:center;padding:14px;color:#ccc;font-size:13px">ยังไม่มีสินค้าหรือแอดมิน</div>';return}
-  let h='';
-  if(assignDirty){h+=`<div style="position:sticky;top:0;z-index:10;padding:10px 0"><button style="width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--brown),var(--bl));color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(139,94,60,.35);animation:fadeSlideIn .3s ease" onclick="saveAssign()">💾 บันทึกการกำหนดสินค้า</button></div>`}
-  products.forEach(p=>{
-    const assigned=productAssign[p.id]||[];
-    const allAssigned=assigned.length===0;
-    const imgEl=p.img?`<img src="${p.img}" style="width:32px;height:32px;object-fit:cover;border-radius:8px">`:`<span style="font-size:10px;font-weight:700;color:var(--brown);line-height:1.2">${p.short||p.name||'?'}</span>`;
-    h+=`<div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid ${assignDirty?'rgba(139,94,60,.2)':'rgba(180,140,100,.08)'}">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="width:32px;height:32px;border-radius:8px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;overflow:hidden">${imgEl}</div>
-        <div style="flex:1;font-weight:700;font-size:14px">${p.name}</div>
-        <span style="font-size:10px;color:${allAssigned?'var(--gr)':'var(--bl2)'};font-weight:600">${allAssigned?'✅ ทุกคน':assigned.length+' คน'}</span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        <button style="padding:5px 12px;border-radius:8px;border:1px solid ${allAssigned?'var(--brown)':'#ddd'};background:${allAssigned?'var(--brown)':'#fff'};color:${allAssigned?'#fff':'#999'};font-size:11px;font-weight:600;cursor:pointer" onclick="toggleAssign('${p.id}','__all__')">ทุกคน</button>`;
-    admins.forEach(a=>{
-      const isOn=assigned.includes(a.email);
-      const tc=gTC(a.team);
-      h+=`<button style="padding:5px 12px;border-radius:8px;border:1px solid ${isOn?tc:'#eee'};background:${isOn?tc:'#f9f6f2'};color:${isOn?'#fff':'#999'};font-size:11px;font-weight:600;cursor:pointer" onclick="toggleAssign('${p.id}','${a.email}')">${a.name}</button>`;
-    });
-    h+=`</div></div>`;
-  });
-  if(assignDirty){h+=`<button style="width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--brown),var(--bl));color:#fff;font-size:15px;font-weight:800;cursor:pointer;margin-top:4px;box-shadow:0 4px 16px rgba(139,94,60,.35)" onclick="saveAssign()">💾 บันทึกการกำหนดสินค้า</button>`}
-  document.getElementById('prodAssignC').innerHTML=h;
-}
-function toggleAssign(pid,email){
-  if(email==='__all__'){delete productAssign[pid]}
-  else{
-    if(!productAssign[pid])productAssign[pid]=[];
-    const idx=productAssign[pid].indexOf(email);
-    if(idx>=0)productAssign[pid].splice(idx,1);
-    else productAssign[pid].push(email);
-    if(productAssign[pid].length===0)delete productAssign[pid];
-  }
-  sv('cream_prodAssign',productAssign);syncAssign();assignDirty=true;renderProdAssign();
-}
-function saveAssign(){
-  sv('cream_prodAssign',productAssign);syncAssign();assignDirty=false;renderProdAssign();renderProdMgmt();
-  showSuc('✅','บันทึกสำเร็จ!','กำหนดสินค้าให้แอดมินแล้ว');setTimeout(hideSuc,1500);
-}
-
-function genSKU(brand){
-  let prefix='';
-  const clean=(brand||'').replace(/\s+/g,'');
-  for(let i=0;i<clean.length&&prefix.length<3;i++){const c=clean[i];if(/[a-zA-Z]/.test(c))prefix+=c.toUpperCase();else if(/[ก-๙]/.test(c))prefix+=c}
-  if(!prefix)prefix='PRD';
-  let maxNum=0;
-  products.forEach(p=>{if(p.sku){const m=p.sku.match(/-(\d+)$/);if(m)maxNum=Math.max(maxNum,parseInt(m[1]))}});
-  return prefix+'-'+String(maxNum+1).padStart(3,'0');
-}
 function showAddProduct(){
   document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box">
     <div class="mf-title">เพิ่มสินค้าใหม่ <button class="mf-close" onclick="closeM()">✕</button></div>
@@ -878,37 +820,6 @@ function showAddProduct(){
     <div class="lerr" id="pErr" style="margin-top:8px"></div>
   </div></div>`;
 }
-function autoFillSKU(){
-  const sel=document.getElementById('pBrandSel');
-  if(!sel)return;
-  const brand=sel.value==='__new__'?(document.getElementById('pBrandNew').value.trim()||''):sel.value;
-  if(brand){document.getElementById('pSku').value=genSKU(brand)}else{document.getElementById('pSku').value=''}
-}
-
-function prevProdImg(input,prevId,dataId){
-  const file=input.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    // ย่อรูปเป็น 120x120 เพื่อเก็บใน Sheets ได้
-    const img=new Image();
-    img.onload=function(){
-      const c=document.createElement('canvas');
-      const max=120;
-      let w=img.width,h=img.height;
-      if(w>h){h=Math.round(h*max/w);w=max}else{w=Math.round(w*max/h);h=max}
-      c.width=w;c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
-      const small=c.toDataURL('image/jpeg',0.7);
-      document.getElementById(prevId).innerHTML=`<img src="${small}" style="width:100%;height:100%;object-fit:cover">`;
-      document.getElementById(prevId).style.border='2px solid var(--brown)';
-      document.getElementById(dataId).value=small;
-    };
-    img.src=e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-function removeProdImg(){document.getElementById('epImgData').value='__remove__';document.getElementById('epImgPrev').innerHTML='<span style="font-size:28px;color:#ccc">📷</span>';document.getElementById('epImgPrev').style.border='2px dashed #d4c4b0'}
-
 function doAddProduct(){
   const name=document.getElementById('pName').value.trim();
   const err=document.getElementById('pErr');
@@ -958,7 +869,7 @@ function renderTeam(){
 function showAddMember(){document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box"><div class="mf-title">➕ เพิ่มสมาชิก <button class="mf-close" onclick="closeM()">✕</button></div><input class="mf-input" id="mNm" placeholder="ชื่อ"><input class="mf-input" id="mEm" placeholder="อีเมล Hotmail" type="email"><input class="mf-input" id="mPn" placeholder="PIN 4 หลัก" maxlength="4" inputmode="numeric"><select class="mf-select" id="mTm"><option value="">-- เลือกทีม --</option>${teams.map(t=>`<option>${t}</option>`).join('')}</select><button class="mf-btn" onclick="doAddMem()">✅ เพิ่ม</button><div class="lerr" id="mErr" style="margin-top:8px"></div></div></div>`}
 function doAddMem(){const nm=document.getElementById('mNm').value.trim(),em=document.getElementById('mEm').value.trim().toLowerCase(),pn=document.getElementById('mPn').value.trim(),tm=document.getElementById('mTm').value,err=document.getElementById('mErr');if(!nm||!em||!pn||!tm){err.textContent='กรอกข้อมูลให้ครบ';return}if(pn.length!==4){err.textContent='PIN ต้อง 4 หลัก';return}if(users.find(u=>u.email===em)){err.textContent='อีเมลนี้มีแล้ว';return}users.push({email:em,pin:pn,name:nm,role:'admin',team:tm});sv('cream_users',users);syncUsers();closeM();renderTeam();showSuc('✅','เพิ่มสำเร็จ!','');setTimeout(hideSuc,1400)}
 function showEditMember(em){const u=users.find(x=>x.email===em);if(!u)return;document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box"><div class="mf-title">✏️ แก้ไข <button class="mf-close" onclick="closeM()">✕</button></div><div style="font-size:12px;color:#aaa;margin-bottom:12px">${u.email}</div><input class="mf-input" id="eNm" value="${u.name}"><input class="mf-input" id="ePn" value="${u.pin}" maxlength="4" inputmode="numeric"><select class="mf-select" id="eTm">${teams.map(t=>`<option ${u.team===t?'selected':''}>${t}</option>`).join('')}</select><button class="mf-btn" onclick="doEditMem('${em}')">💾 บันทึก</button><button class="mf-btn danger" onclick="doDelMem('${em}')">🗑️ ลบ</button></div></div>`}
-function doEditMem(em){const i=users.findIndex(u=>u.email===em);if(i<0)return;const oldName=users[i].name;const newName=document.getElementById('eNm').value.trim();users[i]={...users[i],name:newName,pin:document.getElementById('ePn').value.trim(),team:document.getElementById('eTm').value};sv('cream_users',users);syncUsers();if(oldName!==newName){fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"renameAdmin",email:em,newName:newName})}).then(()=>console.log("Renamed sheets for",em)).catch(()=>{})}closeM();renderTeam();showSuc('✅','สำเร็จ!',oldName!==newName?`เปลี่ยนชื่อ ${oldName} → ${newName}\nชีทอัปเดตอัตโนมัติ`:'');setTimeout(hideSuc,2000)}
+function doEditMem(em){const i=users.findIndex(u=>u.email===em);if(i<0)return;const oldName=users[i].name;const newName=document.getElementById('eNm').value.trim();users[i]={...users[i],name:newName,pin:document.getElementById('ePn').value.trim(),team:document.getElementById('eTm').value};sv('cream_users',users);syncUsers();if(oldName!==newName){fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"renameAdmin",email:em,oldName:oldName,newName:newName})}).then(()=>console.log("Renamed sheets for",em)).catch(()=>{})}closeM();renderTeam();showSuc('✅','สำเร็จ!',oldName!==newName?`เปลี่ยนชื่อ ${oldName} → ${newName}\nชีทอัปเดตอัตโนมัติ`:'');setTimeout(hideSuc,2000)}
 function doDelMem(em){const u=users.find(x=>x.email===em);if(!u||u.role==='boss')return;if(!confirm(`ลบ "${u.name}"?`))return;users=users.filter(x=>x.email!==em);sv('cream_users',users);syncUsers();closeM();renderTeam()}
 function showAddTeam(){document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box"><div class="mf-title">🏷️ สร้างทีม <button class="mf-close" onclick="closeM()">✕</button></div><input class="mf-input" id="tNm" placeholder="ชื่อทีม"><button class="mf-btn" onclick="doAddTeam()">✅ สร้าง</button><div class="lerr" id="tErr" style="margin-top:8px"></div></div></div>`}
 function doAddTeam(){const nm=document.getElementById('tNm').value.trim();if(!nm){document.getElementById('tErr').textContent='ใส่ชื่อ';return}if(teams.includes(nm)){document.getElementById('tErr').textContent='มีแล้ว';return}teams.push(nm);sv('cream_teams',teams);closeM();renderTeam();showSuc('✅','สำเร็จ!','');setTimeout(hideSuc,1200)}
@@ -989,7 +900,7 @@ function hideSuc(){document.getElementById('sucOv').style.display='none'}
 
 document.addEventListener('DOMContentLoaded',()=>{
   // === Auto-Update System ===
-  const APP_VER='v12.4';
+  const APP_VER='v13.0';
   window._APP_VER=APP_VER;
   // อัปเดตเวอร์ชัน (ไม่ลบข้อมูลสินค้า)
   if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.setItem('cream_ver',APP_VER);console.log('Updated to '+APP_VER)}
@@ -1014,7 +925,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Boss: push ขึ้น Cloud | Admin: pull จาก Cloud
   setInterval(async()=>{
     if(!cu)return;
-    if(cu.role==='boss'){syncProducts();syncUsers();syncAssign();console.log('Boss auto-push to Cloud')}
+    if(cu.role==='boss'){syncProducts();syncUsers();console.log('Boss auto-push to Cloud')}
     try{
       const res=await fetch(APPS_SCRIPT_URL);
       const data=await res.json();
