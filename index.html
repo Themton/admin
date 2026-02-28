@@ -344,6 +344,8 @@ function showApp(){
   if(cu.role==='boss'){
     setTimeout(()=>{syncProducts();syncUsers();console.log('Auto-sync ALL to Cloud')},1000);
   }
+  // ทุกคน: ดึงข้อมูลจาก Cloud ทันทีเมื่อ login (ล้างออเดอร์เก่าในเครื่อง)
+  autoRefreshFromCloud();
   // โหลด Cloud ใน background
   loadProductsFromSheets().then(()=>{if(cu.role!=='boss'&&products.length>0)renderProdCards()});
 }
@@ -766,7 +768,8 @@ async function sendToSheets(o,slip){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))r
 function syncProducts(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;const body=JSON.stringify({action:"saveProducts",products:products.map(p=>({id:p.id,name:p.name}))});fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body}).then(()=>console.log("SyncProducts sent")).catch(e=>console.log("SyncProducts err:",e))}
 function syncUsers(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;const body=JSON.stringify({action:"saveUsers",users:users.map(u=>({email:u.email,pin:u.pin,name:u.name,role:u.role,team:u.team}))});fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body}).then(()=>console.log("SyncUsers sent")).catch(e=>console.log("SyncUsers err:",e))}
 async function forceSyncToSheets(){showSuc('☁️','กำลัง Sync...','อัปโหลดข้อมูล');try{syncProducts();syncUsers();showSuc('✅','Sync สำเร็จ!','สินค้า '+products.length+' รายการ\nรอ 5 วิ แล้วให้แอดมิน logout/login ใหม่');setTimeout(hideSuc,4000)}catch(e){showSuc('❌','Sync ไม่สำเร็จ',e.message||'ลองใหม่');setTimeout(hideSuc,3000)}}
-async function pullFromCloud(){showSuc('⬇️','กำลังดึงข้อมูล...','จาก Google Sheets');try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();if(data.products){products=data.products.map(p=>({id:p.id,name:p.name,short:p.name,price:0,icon:'',sheet:p.name,sku:'',img:''}));sv('cream_products',products)}if(data.users){users=data.users;sv('cream_users',users)}orders=[];sv('cream_orders',orders);showSuc('✅','ดึงข้อมูลสำเร็จ!','สินค้า: '+products.length+' | สมาชิก: '+users.length+'\nออเดอร์ในเครื่องถูกล้าง');setTimeout(()=>{hideSuc();goP('settings')},2000)}catch(e){showSuc('❌','ดึงไม่สำเร็จ',e.message||'ลองใหม่');setTimeout(hideSuc,3000)}}
+async function pullFromCloud(){showSuc('⬇️','กำลังดึงข้อมูล...','จาก Google Sheets');try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();if(data.products){products=data.products.map(p=>({id:p.id,name:p.name,short:p.name,price:0,icon:'',sheet:p.name,sku:'',img:''}));sv('cream_products',products)}if(data.users){users=data.users;sv('cream_users',users)}orders=[];sv('cream_orders',orders);showSuc('✅','ดึงข้อมูลสำเร็จ!','สินค้า: '+products.length+' | สมาชิก: '+users.length+'\nออเดอร์ในเครื่องถูกล้าง');setTimeout(()=>{hideSuc();nav('settings')},2000)}catch(e){showSuc('❌','ดึงไม่สำเร็จ',e.message||'ลองใหม่');setTimeout(hideSuc,3000)}}
+async function autoRefreshFromCloud(){try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();if(data.products&&data.products.length>0){products=data.products.map(p=>({id:p.id,name:p.name,short:p.name,price:0,icon:'',sheet:p.name,sku:'',img:''}));sv('cream_products',products)}if(data.users&&data.users.length>0){users=data.users;sv('cream_users',users);if(cu&&cu.role!=='boss'){const still=users.find(x=>x.email===cu.email&&x.pin===cu.pin);if(!still){cu=null;localStorage.removeItem('cream_cu');location.reload();return}}}if(data.orders){const cloudOrders=data.orders.map(so=>({id:Date.now()+Math.random(),dailyNo:so.dailyNo||0,date:normDate(so.date),time:so.time||'',productName:so.productName||'',price:so.amount||0,qty:1,amount:so.amount||0,phone:so.phone||'',detail:so.detail||'',addedBy:so.adminEmail||'',adminName:so.adminName||'',team:(users.find(u=>u.email===so.adminEmail)||{}).team||''}));const localToday=orders.filter(o=>o.date===fD(new Date())&&!cloudOrders.find(c=>c.time===o.time&&c.amount===o.amount&&c.addedBy===o.addedBy));const merged=[...localToday];cloudOrders.forEach(co=>{if(!merged.find(m=>m.time===co.time&&m.amount===co.amount&&(m.addedBy===co.addedBy||m.adminName===co.adminName))){merged.push(co)}});const oldOrders=orders.filter(o=>o.date!==fD(new Date()));orders=[...merged,...oldOrders];sv('cream_orders',orders)}console.log('Auto-refresh done: prod='+products.length+' orders='+orders.length);const cp=document.querySelector('.pg.ac');if(cp){const pid=cp.id.replace('pg-','');if(pid==='orders')renderOrd();if(pid==='home')updateHome();if(pid==='add'&&products.length>0)renderProdCards()}}catch(e){console.log('Auto-refresh err:',e)}}
 function clearLocalData(){if(!confirm('ล้างข้อมูลทั้งหมดในเครื่อง?\n(สินค้า, ออเดอร์, ทีม)\n\nข้อมูลใน Cloud ไม่ถูกลบ\nLogin ใหม่จะดึงจาก Cloud'))return;['cream_products','cream_orders','cream_teams','cream_prodAssign'].forEach(k=>localStorage.removeItem(k));products=[];orders=[];showSuc('🗑️','ล้างแล้ว!','Login ใหม่เพื่อดึงข้อมูลจาก Cloud');setTimeout(()=>{hideSuc();doLogout()},2000)}
 async function testConnection(){showSuc('🔍','กำลังทดสอบ...','เชื่อมต่อ Google Sheets');try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();const pCount=data.products?data.products.length:0;const oCount=data.orders?data.orders.length:0;showSuc('✅','เชื่อมต่อสำเร็จ!','สินค้าใน Cloud: '+pCount+' รายการ\nออเดอร์วันนี้: '+oCount+' รายการ');setTimeout(hideSuc,4000)}catch(e){showSuc('❌','เชื่อมต่อไม่ได้',e.message||'ตรวจสอบ URL');setTimeout(hideSuc,3000)}}
 
@@ -930,20 +933,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   },30000);
 
   // === Auto-Sync ทุก 60 วิ ===
-  // Boss: push ขึ้น Cloud | Admin: pull จาก Cloud
+  // Boss: push ขึ้น Cloud + pull | Admin: pull จาก Cloud
   setInterval(async()=>{
     if(!cu)return;
     if(cu.role==='boss'){syncProducts();syncUsers();console.log('Boss auto-push to Cloud')}
-    try{
-      const res=await fetch(APPS_SCRIPT_URL);
-      const data=await res.json();
-      if(data.products&&data.products.length>0){
-        const sp=data.products.map(p=>({...p,img:p.img||''}));
-        const changed=JSON.stringify(sp)!==JSON.stringify(products);
-        if(changed){products=sp;sv('cream_products',products);console.log('Products auto-refreshed:',products.length)}
-      }
-      if(data.assign){const changed2=JSON.stringify(data.assign)!==JSON.stringify(productAssign);if(changed2){productAssign=data.assign;sv('cream_prodAssign',productAssign)}}if(data.users&&data.users.length>0){const changed3=JSON.stringify(data.users)!==JSON.stringify(users);if(changed3){users=data.users;sv('cream_users',users);console.log('Users auto-refreshed:',users.length)}if(cu&&cu.role!=='boss'){const still=data.users.find(x=>x.email===cu.email&&x.pin===cu.pin);if(!still){cu=null;localStorage.removeItem('cream_cu');location.reload()}}}
-    }catch(e){}
+    autoRefreshFromCloud();
   },60000);
 
   // Keyboard-aware sticky submit bar
