@@ -296,6 +296,7 @@ let fProd="ทั้งหมด",fAdmin="ทั้งหมด",dPeriod="วั
 const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const ld=(k,d)=>{try{const s=localStorage.getItem(k);return s?JSON.parse(s):d}catch(e){return d}};
 const fD=d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+function normDate(v){if(!v)return'';if(typeof v==='string'&&/^\d{2}\/\d{2}\/\d{4}$/.test(v))return v;const d=new Date(v);if(isNaN(d))return String(v);return fD(d)}
 const fT=d=>d.toLocaleTimeString('th-TH',{hour12:false});
 const gMK=s=>{const p=s.split('/');return`${p[1]}/${p[2]}`};
 const gMN=k=>{const m=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];const[mm,yy]=k.split('/');return`${m[parseInt(mm)]} ${yy}`};
@@ -372,13 +373,14 @@ function nav(p){
 function mergeSheetsOrders(){
   if(!sheetsData||!sheetsData.orders)return;
   const newOrders=sheetsData.orders.filter(so=>{
-    return !orders.find(o=>o.date===so.date&&o.time===so.time&&(o.addedBy===so.adminEmail||o.adminName===so.adminName)&&o.amount===so.amount);
+    const soDate=normDate(so.date);
+    return !orders.find(o=>o.date===soDate&&o.time===so.time&&(o.addedBy===so.adminEmail||o.adminName===so.adminName)&&o.amount===so.amount);
   });
   newOrders.forEach(so=>{
     orders.push({
       id:Date.now()+Math.random(),
       dailyNo:so.dailyNo||0,
-      date:so.date,
+      date:normDate(so.date),
       time:so.time||'',
       productName:so.productName||'',
       price:so.amount||0,
