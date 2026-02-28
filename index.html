@@ -339,6 +339,7 @@ function showApp(){
   const r=document.getElementById('topRl');if(cu.role==='boss'){r.textContent='หัวหน้า';r.className='trole rb'}else{r.textContent='แอดมิน';r.className='trole ra'}
   document.getElementById('topTm').textContent=cu.team!=='ทั้งหมด'?cu.team:'';buildNav();
   // แสดงหน้าทันที ไม่รอ Cloud
+  orders=[];sv('cream_orders',orders); // ล้างออเดอร์เก่า รอ Cloud ส่งมาใหม่
   nav(cu.role==='boss'?'home':'add');
   // Boss: sync ทุกอย่างขึ้น Cloud อัตโนมัติทุกครั้ง
   if(cu.role==='boss'){
