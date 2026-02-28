@@ -209,8 +209,8 @@ body.boss-mode #stickySubmit button{max-width:600px}
       <button onclick="removeSlip()" style="position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
     </div>
     <label id="slipUploadBtn" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;background:#fff;border:2px dashed rgba(180,140,100,.25);border-radius:14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--brown)">
-      📸 แนบสลิป
-      <input type="file" accept="image/*" capture="environment" onchange="handleSlip(this)" style="display:none">
+      📸 ถ่ายรูป / เลือกรูปสลิป
+      <input type="file" accept="image/*" onchange="handleSlip(this)" style="display:none">
     </label>
   </div>
   <div id="orderSummary" style="display:none"></div>
@@ -1038,7 +1038,7 @@ function hideSuc(){document.getElementById('sucOv').style.display='none'}
 
 document.addEventListener('DOMContentLoaded',()=>{
   // === Auto-Update System ===
-  const APP_VER='v11.8';
+  const APP_VER='v11.9';
   window._APP_VER=APP_VER;
   // อัปเดตเวอร์ชัน (ไม่ลบข้อมูลสินค้า)
   if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.setItem('cream_ver',APP_VER);console.log('Updated to '+APP_VER)}
