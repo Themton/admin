@@ -167,6 +167,7 @@ body.boss-mode #stickySubmit button{max-width:600px}
   </div>
 </div>
 <div id="mainApp" style="display:none">
+<div id="debugBanner" style="background:#fff3cd;color:#856404;padding:6px 12px;font-size:11px;text-align:center;font-weight:600;min-height:20px"></div>
 <div class="topbar">
   <div style="display:flex;align-items:center;gap:10px"><img src="data:image/png;base64,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" style="width:36px;height:36px;border-radius:10px"><div><div style="font-weight:700;font-size:14px" id="topNm">Admin</div><span class="trole" id="topRl">แอดมิน</span></div></div>
   <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--tm)" id="topTm"></span><button style="background:none;border:none;cursor:pointer;font-size:20px;padding:6px" onclick="doLogout()">🚪</button></div>
@@ -361,7 +362,7 @@ function showApp(){
     setTimeout(()=>{syncProducts();syncUsers();console.log('Auto-sync ALL to Cloud')},1000);
   }
   // ทุกคน: ดึงข้อมูลจาก Cloud ทันทีเมื่อ login
-  // autoRefresh จะถูกเรียกจาก updateHome/nav อยู่แล้ว
+  setTimeout(()=>autoRefreshFromCloud(true),500);
   // โหลด Cloud ใน background
   loadProductsFromSheets().then(()=>{if(cu.role!=='boss'&&products.length>0)renderProdCards()});
 }
@@ -388,7 +389,7 @@ function nav(p){
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('ac'));const el=document.getElementById('pg-'+p);if(el)el.classList.add('ac');
   document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('ac',b.dataset.p===p));
   document.getElementById('stickySubmit').style.display=p==='add'?'block':'none';
-  if(p==='home'){updateHome()}if(p==='add'){initAddPage();loadProductsFromSheets().then(()=>renderProdCards())}if(p==='orders'){renderOrd();autoRefreshFromCloud(true);if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}}if(p==='dash'){buildDF();renderDash();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}}if(p==='settings'){renderProdMgmt();renderTeam()}window.scrollTo(0,0);
+  if(p==='home'){updateHome();autoRefreshFromCloud(true)}if(p==='add'){initAddPage();loadProductsFromSheets().then(()=>renderProdCards())}if(p==='orders'){renderOrd();autoRefreshFromCloud(true);if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}}if(p==='dash'){buildDF();renderDash();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}}if(p==='settings'){renderProdMgmt();renderTeam()}window.scrollTo(0,0);
 }
 
 // รวมออเดอร์จาก Sheets เข้า orders (สำหรับ boss)
@@ -463,7 +464,6 @@ function updateHome(){
   }else{
     document.getElementById('bossDatePicker').style.display='none';
     renderAdminHome(td);
-    autoRefreshFromCloud(true);
   }
 }
 
@@ -795,7 +795,9 @@ async function forceSyncToSheets(){showSuc('☁️','กำลัง Sync...','�
 async function pullFromCloud(){showSuc('⬇️','กำลังดึงข้อมูล...','จาก Google Sheets');try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();if(data.products){products=data.products.map(p=>({id:p.id,name:p.name,short:p.name,price:0,icon:'',sheet:p.name,sku:'',img:''}));sv('cream_products',products)}if(data.users){users=data.users;sv('cream_users',users)}orders=[];sv('cream_orders',orders);showSuc('✅','ดึงข้อมูลสำเร็จ!','สินค้า: '+products.length+' | สมาชิก: '+users.length+'\nออเดอร์ในเครื่องถูกล้าง');setTimeout(()=>{hideSuc();nav('settings')},2000)}catch(e){showSuc('❌','ดึงไม่สำเร็จ',e.message||'ลองใหม่');setTimeout(hideSuc,3000)}}
 async function autoRefreshFromCloud(force){
   if(!force&&window._lastSubmit&&Date.now()-window._lastSubmit<10000)return;
+  const dbg=document.getElementById('debugBanner');
   try{
+    if(dbg)dbg.textContent='⏳ กำลังดึงข้อมูลจาก Cloud...';
     const viewDate=(cu&&cu.role==='boss'&&bossViewDate)?bossViewDate:null;
     const dateParam=viewDate?'?date='+encodeURIComponent(viewDate):'';
     const res=await fetch(APPS_SCRIPT_URL+dateParam);
@@ -824,7 +826,11 @@ async function autoRefreshFromCloud(force){
     const otherDays=orders.filter(o=>o.date!==td&&!o._local);
     orders=[...cloudOrders,...localOnly,...otherDays];
     sv('cream_orders',orders);
-    console.log('Auto-refresh: cloud='+cloudOrders.length+' local='+localOnly.length+' date='+td);
+    const myOrders=getVO();
+    if(dbg)dbg.textContent='✅ Cloud: '+cloudOrders.length+' ออเดอร์ | ของฉัน: '+myOrders.length+' | วันที่: '+td+' | ชื่อ: '+cu.name;
+    setTimeout(()=>{if(dbg)dbg.textContent=''},5000);
+    console.log('Auto-refresh: cloud='+cloudOrders.length+' myOrders='+myOrders.length+' date='+td+' cuName='+cu.name);
+    if(cloudOrders.length>0)console.log('Sample order adminName:',cloudOrders[0].adminName,'addedBy:',cloudOrders[0].addedBy);
     const cp=document.querySelector('.pg.ac');
     if(cp){
       const pid=cp.id.replace('pg-','');
@@ -832,7 +838,7 @@ async function autoRefreshFromCloud(force){
       if(pid==='home'){if(cu.role==='boss')renderBossHome(td);else renderAdminHome(td)}
       if(pid==='add'&&products.length>0)renderProdCards()
     }
-  }catch(e){console.log('Auto-refresh err:',e)}
+  }catch(e){if(dbg)dbg.textContent='❌ Error: '+e.message;console.log('Auto-refresh err:',e)}
 }
 function clearLocalData(){if(!confirm('ล้างข้อมูลทั้งหมดในเครื่อง?\n(สินค้า, ออเดอร์, ทีม)\n\nข้อมูลใน Cloud ไม่ถูกลบ\nLogin ใหม่จะดึงจาก Cloud'))return;['cream_products','cream_orders','cream_teams','cream_prodAssign'].forEach(k=>localStorage.removeItem(k));products=[];orders=[];showSuc('🗑️','ล้างแล้ว!','Login ใหม่เพื่อดึงข้อมูลจาก Cloud');setTimeout(()=>{hideSuc();doLogout()},2000)}
 async function testConnection(){showSuc('🔍','กำลังทดสอบ...','เชื่อมต่อ Google Sheets');try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();const pCount=data.products?data.products.length:0;const oCount=data.orders?data.orders.length:0;const uCount=data.users?data.users.length:0;const oSample=data.orders&&data.orders[0]?JSON.stringify(data.orders[0]).substring(0,100):'ไม่มี';showSuc('✅','เชื่อมต่อสำเร็จ!','สินค้า: '+pCount+'\nสมาชิก: '+uCount+'\nออเดอร์วันนี้: '+oCount+'\nตัวอย่าง: '+oSample);setTimeout(hideSuc,8000)}catch(e){showSuc('❌','เชื่อมต่อไม่ได้',e.message||'ตรวจสอบ URL');setTimeout(hideSuc,3000)}}
