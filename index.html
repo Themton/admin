@@ -101,8 +101,8 @@ textarea.fi{min-height:80px;resize:vertical}
 <div class="suc-ov" id="sOv"><div style="font-size:48px" id="sIc"></div><div style="font-size:18px;font-weight:700" id="sMs"></div><div style="font-size:13px;color:#888;margin-top:4px;white-space:pre-line" id="sSb"></div></div>
 
 <script>
-const API="https://script.google.com/macros/s/AKfycbzXBDjgXus4jNWHdKi3vnF30xYbN15Q1U6buMcVvqaqeTW4dGG65RC2I0vbQ4V-MQp8/exec";
-const VER='v15.2';
+const API="https://script.google.com/macros/s/AKfycbyQjfmt-KOnRIKOfQeZs8ZiYxTB8F14cQzGYNedURU4H8gRA-k8ovzjF9ps2oW8G1tW/exec";
+const VER='v15.3';
 let cu=null,orders=[],products=[],users=[],teams=[];
 let selP=null,bD='',fProd='ทั้งหมด',fAdm='ทั้งหมด',cPg='';
 
@@ -145,30 +145,57 @@ async function FC(date){
 }
 async function PC(body){
   const data=JSON.stringify(body);
-  // วิธี 1: fetch ปกติ (ถ้า CORS ใช้ได้)
   try{
-    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:data,redirect:'follow'});
-    const t=await r.text();
-    console.log('POST ok:',t.substring(0,100));
+    await fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:data});
+    console.log('POST sent (no-cors)');
     return true;
-  }catch(e){console.log('POST cors fail, trying beacon:',e.message)}
-  // วิธี 2: sendBeacon (ทำงานได้แม้ redirect)
+  }catch(e){
+    console.log('POST err:',e);
+    // fallback: retry once
+    try{await fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:data});return true}catch(e2){}
+    return false;
+  }
+}
+
+// ===== DEBUG: ทดสอบ API =====
+async function testAPI(){
+  st('🔍 กำลังทดสอบ API...');
   try{
-    const ok=navigator.sendBeacon(API,new Blob([data],{type:'text/plain'}));
-    console.log('Beacon:',ok);
-    if(ok)return true;
-  }catch(e){console.log('Beacon fail:',e.message)}
-  // วิธี 3: form submit via iframe
-  try{
-    const f=document.createElement('form');f.method='POST';f.action=API;f.target='_pcframe';f.style.display='none';
-    const i=document.createElement('input');i.name='data';i.value=data;f.appendChild(i);
-    let ifr=document.getElementById('_pcframe');
-    if(!ifr){ifr=document.createElement('iframe');ifr.name='_pcframe';ifr.id='_pcframe';ifr.style.display='none';document.body.appendChild(ifr)}
-    document.body.appendChild(f);f.submit();f.remove();
-    console.log('Form submit done');
-    return true;
-  }catch(e){console.log('Form fail:',e.message)}
-  return false;
+    const r=await fetch(API);const d=await r.json();
+    let msg='=== API TEST ===\n';
+    msg+='Products: '+(d.products?d.products.length:0)+'\n';
+    msg+='Users: '+(d.users?d.users.length:0)+'\n';
+    msg+='Orders: '+(d.orders?d.orders.length:0)+'\n';
+    msg+='Date: '+(d.date||'?')+'\n';
+    if(d.error)msg+='ERROR: '+d.error+'\n';
+    if(d.orders&&d.orders.length>0){
+      msg+='\n--- ออเดอร์ ---\n';
+      d.orders.slice(0,3).forEach((o,i)=>{
+        msg+=(i+1)+'. '+o.date+' | '+o.productName+' | ฿'+o.amount+' | '+o.adminName+'\n';
+      });
+    }
+    if(d.debug){
+      msg+='\n--- DEBUG ---\n';
+      msg+='Target: '+d.debug.targetDate+'\n';
+      msg+='Sheets: '+(d.debug.sheets||[]).join(', ')+'\n';
+      if(d.debug.sampleDates&&d.debug.sampleDates.length){
+        msg+='\n--- วันที่ในชีท ---\n';
+        d.debug.sampleDates.forEach(s=>{
+          msg+=s.sheet+': raw="'+s.raw+'" fmt="'+s.formatted+'" isDate='+s.isDate+' match='+s.matchTarget+'\n';
+        });
+      }
+    }
+    alert(msg);
+    st('✅ API OK','#E8F5E9');
+  }catch(e){alert('❌ API ERROR: '+e.message);st('❌ '+e.message,'#FFEBEE')}
+}
+
+// ทดสอบ POST
+async function testPOST(){
+  st('🔍 กำลังทดสอบ POST...');
+  const testData={action:'addOrder',date:fD(new Date()),time:fT(new Date()),productName:'TEST',amount:1,phone:'0000000000',detail:'TEST POST',adminName:cu?cu.name:'test',addedBy:cu?cu.email:'test'};
+  const sent=await PC(testData);
+  alert('POST '+(sent?'ส่งแล้ว (รอ 5 วิ แล้วกด Test API ดู)':'ส่งไม่ได้!'));
 }
 
 // ===== AUTH =====
@@ -361,7 +388,8 @@ function rSett(){
   });
   h+=`<span style="font-size:16px;font-weight:700;display:block;margin:24px 0 12px">🏷️ ทีม</span>`;
   teams.forEach(t=>{h+=`<div class="si"><span style="font-weight:600">${t}</span></div>`});
-  h+=`<div style="margin-top:30px;text-align:center"><button onclick="FC()" style="background:none;border:1px solid var(--brown);color:var(--brown);border-radius:12px;padding:10px 20px;cursor:pointer;font-weight:600;font-size:13px">🔄 ดึงข้อมูลจาก Cloud</button></div>
+  h+=`<div style="margin-top:30px;text-align:center"><button onclick="FC()" style="background:none;border:1px solid var(--brown);color:var(--brown);border-radius:12px;padding:10px 20px;cursor:pointer;font-weight:600;font-size:13px">🔄 รีเฟรช</button></div>
+  <div style="margin-top:12px;text-align:center"><button onclick="testAPI()" style="background:#E3F2FD;border:none;border-radius:12px;padding:8px 16px;cursor:pointer;font-size:12px;color:#1565C0;font-weight:600">🔍 Test API</button> <button onclick="testPOST()" style="background:#FFF3E0;border:none;border-radius:12px;padding:8px 16px;cursor:pointer;font-size:12px;color:#E65100;font-weight:600">📤 Test POST</button></div>
   <div style="text-align:center;margin-top:16px;color:#ccc;font-size:11px">${VER}</div>`;
   pg.innerHTML=h;
   // ดึง Cloud เพื่อให้ข้อมูลล่าสุด
