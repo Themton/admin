@@ -102,8 +102,8 @@ textarea.fi{min-height:80px;resize:vertical}
 <div class="suc-ov" id="sOv"><div style="font-size:48px" id="sIc"></div><div style="font-size:18px;font-weight:700" id="sMs"></div><div style="font-size:13px;color:#888;margin-top:4px;white-space:pre-line" id="sSb"></div></div>
 
 <script>
-const API="https://script.google.com/macros/s/AKfycbxjDp0iwV7YwGxTVhPvLd__UoTHg0-_RNOQM_LvIsCBshEUABYkFt8TqMzWLUwLiYx0/exec";
-const VER='v15.5';
+const API="https://script.google.com/macros/s/AKfycbzv2IPsFDga6PGV89AXdbjn_iNkVy_UzPHzbiJuj2J266pq0oAxDdrpyD3Rc3zrWZlK/exec";
+const VER='v15.6';
 let cu=null,orders=[],products=[],users=[],teams=[];
 let selP=null,bD='',fProd='ทั้งหมด',fAdm='ทั้งหมด',cPg='';
 
@@ -129,13 +129,21 @@ async function FC(date){
       if(cu&&cu.role!=='boss'){if(!users.find(u=>u.email===cu.email&&u.pin===cu.pin)){doLogout();return}}
     }
     if(d.orders){
-      const co=d.orders.map(o=>({...o,date:nD(o.date),amount:Number(o.amount)||0,phone:o.phone?String(o.phone):'',team:(users.find(u=>u.email===o.adminEmail)||{}).team||''}));
-      // เก็บ pending 2 นาที แต่ลบถ้า Cloud มีแล้ว (match time+amount+admin)
+      const co=d.orders.map(o=>{
+        // แปลงเวลาที่อาจมาเป็น Date string
+        let t=o.time||'';
+        if(t.includes('GMT')||t.includes('1899')){
+          const m=t.match(/(\d{2}:\d{2}:\d{2})/);
+          t=m?m[1]:t;
+        }
+        return{...o,date:nD(o.date),time:t,amount:Number(o.amount)||0,phone:o.phone?String(o.phone):'',team:(users.find(u=>u.email===o.adminEmail)||{}).team||''};
+      });
+      // เก็บ pending 2 นาที แต่ลบถ้า Cloud มีแล้ว
       const pend=orders.filter(o=>{
         if(!o._local||!o._ts)return false;
-        if(Date.now()-o._ts>120000)return false; // หมดเวลา 2 นาที
-        // ถ้า Cloud มี order ที่ตรงกัน → ไม่ต้องเก็บ pending
-        const dup=co.find(c=>c.time===o.time&&Math.abs(c.amount-o.amount)<1&&(c.adminName===o.adminName||c.adminEmail===o.adminEmail));
+        if(Date.now()-o._ts>120000)return false;
+        // ตรวจว่า Cloud มี order ที่ตรงกัน (เช็คจาก amount+phone+product+admin)
+        const dup=co.find(c=>Math.abs(c.amount-o.amount)<1 && c.phone===o.phone && c.productName===o.productName && (c.adminName===o.adminName||c.adminEmail===o.adminEmail));
         return !dup;
       });
       orders=[...co,...pend];
