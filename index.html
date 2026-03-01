@@ -361,8 +361,8 @@ function showApp(){
   if(cu.role==='boss'){
     setTimeout(()=>{syncProducts();syncUsers();console.log('Auto-sync ALL to Cloud')},1000);
   }
-  // ทุกคน: ดึงข้อมูลจาก Cloud ทันทีเมื่อ login
-  autoRefreshFromCloud(true);
+  // Admin: ดึงข้อมูลจาก Cloud ทันที (Boss ใช้ fetchBossData จาก updateHome แทน)
+  if(cu.role!=='boss') autoRefreshFromCloud(true);
   // โหลด Cloud ใน background
   loadProductsFromSheets().then(()=>{if(cu.role!=='boss'&&products.length>0)renderProdCards()});
 }
@@ -389,7 +389,7 @@ function nav(p){
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('ac'));const el=document.getElementById('pg-'+p);if(el)el.classList.add('ac');
   document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('ac',b.dataset.p===p));
   document.getElementById('stickySubmit').style.display=p==='add'?'block':'none';
-  if(p==='home'){updateHome();autoRefreshFromCloud(true)}if(p==='add'){initAddPage();loadProductsFromSheets().then(()=>renderProdCards())}if(p==='orders'){renderOrd();autoRefreshFromCloud(true);if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}}if(p==='dash'){buildDF();renderDash();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}}if(p==='settings'){renderProdMgmt();renderTeam()}window.scrollTo(0,0);
+  if(p==='home'){updateHome()}if(p==='add'){initAddPage();loadProductsFromSheets().then(()=>renderProdCards())}if(p==='orders'){renderOrd();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}else{autoRefreshFromCloud(true)}}if(p==='dash'){buildDF();renderDash();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}}if(p==='settings'){renderProdMgmt();renderTeam()}window.scrollTo(0,0);
 }
 
 // รวมออเดอร์จาก Sheets เข้า orders (สำหรับ boss)
@@ -437,7 +437,9 @@ function setBossDate(mode){
 }
 async function fetchBossData(){
   if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;
+  const dbg=document.getElementById('debugBanner');
   try{
+    if(dbg)dbg.textContent='⏳ Boss กำลังดึงข้อมูล...';
     const dateParam=bossViewDate?`?date=${encodeURIComponent(bossViewDate)}`:'';
     const res=await fetch(APPS_SCRIPT_URL+dateParam);
     sheetsData=await res.json();
@@ -449,8 +451,13 @@ async function fetchBossData(){
       const otherDays=orders.filter(o=>o.date!==td);
       orders=[...co,...localOnly,...otherDays];
       sv('cream_orders',orders);
+      if(dbg)dbg.textContent='✅ Boss: Cloud='+co.length+' ออเดอร์ | วันที่='+td+(sheetsData.error?' | ❌'+sheetsData.error:'');
+      setTimeout(()=>{if(dbg)dbg.textContent=''},5000);
+    }else{
+      if(dbg)dbg.textContent='⚠️ Cloud ไม่มีออเดอร์ | error='+(sheetsData?sheetsData.error||'ไม่มี':'response ว่าง');
+      setTimeout(()=>{if(dbg)dbg.textContent=''},5000);
     }
-  }catch(e){console.log("Fetch:",e)}
+  }catch(e){if(dbg)dbg.textContent='❌ Boss fetch error: '+e.message;console.log("Fetch:",e)}
 }
 function updateHome(){
   const td=bossViewDate||fD(new Date());
@@ -1015,11 +1022,15 @@ document.addEventListener('DOMContentLoaded',()=>{
   },30000);
 
   // === Auto-Sync ทุก 60 วิ ===
-  // Boss: push ขึ้น Cloud + pull | Admin: pull จาก Cloud
+  // Boss: push + fetchBossData | Admin: autoRefreshFromCloud
   setInterval(async()=>{
     if(!cu)return;
-    if(cu.role==='boss'){syncProducts();syncUsers();console.log('Boss auto-push to Cloud')}
-    autoRefreshFromCloud();
+    if(cu.role==='boss'){
+      syncProducts();syncUsers();
+      fetchBossData().then(()=>{const td=bossViewDate||fD(new Date());renderBossHome(td)});
+    }else{
+      autoRefreshFromCloud();
+    }
   },60000);
 
   // Keyboard-aware sticky submit bar
