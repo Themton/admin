@@ -400,7 +400,7 @@ function mergeSheetsOrders(){
     });
   });
 }
-function getVO(){if(cu.role==='boss')return orders;return orders.filter(o=>o.addedBy===cu.email)}
+function getVO(){if(cu.role==='boss')return orders;return orders.filter(o=>o.addedBy===cu.email||o.adminName===cu.name)}
 
 // HOME
 let sheetsData=null;
