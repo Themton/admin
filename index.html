@@ -274,7 +274,7 @@ body.boss-mode #stickySubmit button{max-width:600px}
 <div id="modalC"></div>
 
 <script>
-const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbwodgX05diX_DREm1wN3NMs8oqrZnYc0DpGj-nbdo7ye3WBp5wV_-ALKiXwptqy80_D/exec";
+const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbwfyu8E61EF2X9oCoOe1xLscJ29-T8zubB8PAEhxOz2ZDLeggeeohOU7Qlb7Yw7M35N/exec";
 
 const DEFAULT_USERS=[
   {email:"boss@hotmail.com",pin:"0000",name:"หัวหน้า",role:"boss",team:"ทั้งหมด"},
@@ -362,7 +362,7 @@ function showApp(){
     setTimeout(()=>{syncProducts();syncUsers();console.log('Auto-sync ALL to Cloud')},1000);
   }
   // ทุกคน: ดึงข้อมูลจาก Cloud ทันทีเมื่อ login
-  setTimeout(()=>autoRefreshFromCloud(true),500);
+  autoRefreshFromCloud(true);
   // โหลด Cloud ใน background
   loadProductsFromSheets().then(()=>{if(cu.role!=='boss'&&products.length>0)renderProdCards()});
 }
@@ -417,7 +417,7 @@ function mergeSheetsOrders(){
     });
   });
 }
-function getVO(){if(cu.role==='boss')return orders;return orders.filter(o=>o.addedBy===cu.email||o.adminName===cu.name)}
+function getVO(){if(cu.role==='boss')return orders;const myEmail=cu.email.toLowerCase();const myName=cu.name.toLowerCase();return orders.filter(o=>(o.addedBy&&o.addedBy.toLowerCase()===myEmail)||(o.adminName&&o.adminName.toLowerCase()===myName))}
 
 // HOME
 let sheetsData=null;
@@ -797,40 +797,51 @@ async function autoRefreshFromCloud(force){
   if(!force&&window._lastSubmit&&Date.now()-window._lastSubmit<10000)return;
   const dbg=document.getElementById('debugBanner');
   try{
-    if(dbg)dbg.textContent='⏳ กำลังดึงข้อมูลจาก Cloud...';
-    const viewDate=(cu&&cu.role==='boss'&&bossViewDate)?bossViewDate:null;
-    const dateParam=viewDate?'?date='+encodeURIComponent(viewDate):'';
-    const res=await fetch(APPS_SCRIPT_URL+dateParam);
+    if(dbg)dbg.textContent='⏳ กำลังดึงข้อมูล...';
+    const url=APPS_SCRIPT_URL;
+    const res=await fetch(url);
     const data=await res.json();
     sheetsData=data;
+    // อัปเดตสินค้า
     if(data.products&&data.products.length>0){
       products=data.products.map(p=>({id:p.id,name:p.name,short:p.name,price:0,icon:'',sheet:p.name,sku:'',img:''}));
       sv('cream_products',products)
     }
+    // อัปเดตสมาชิก
     if(data.users&&data.users.length>0){
       users=data.users;sv('cream_users',users);
-      if(cu&&cu.role!=='boss'){
-        const still=users.find(x=>x.email===cu.email&&x.pin===cu.pin);
-        if(!still){cu=null;localStorage.removeItem('cream_cu');location.reload();return}
-      }
     }
-    const td=viewDate||fD(new Date());
+    // อัปเดตออเดอร์ - ใช้ Cloud เป็นหลัก
+    const td=fD(new Date());
     const cloudOrders=(data.orders||[]).map(so=>({
-      id:Date.now()+Math.random(),dailyNo:so.dailyNo||0,date:normDate(so.date),
-      time:so.time||'',productName:so.productName||'',price:so.amount||0,
-      qty:so.qty||1,amount:so.amount||0,phone:so.phone||'',detail:so.detail||'',
-      addedBy:so.adminEmail||'',adminName:so.adminName||'',
+      id:'cloud_'+Math.random(),
+      dailyNo:so.dailyNo||0,
+      date:normDate(so.date),
+      time:String(so.time||''),
+      productName:so.productName||'',
+      price:Number(so.amount)||0,
+      qty:1,
+      amount:Number(so.amount)||0,
+      phone:so.phone?String(so.phone):'',
+      detail:so.detail||'',
+      addedBy:so.adminEmail||'',
+      adminName:so.adminName||'',
       team:(users.find(u=>u.email===so.adminEmail)||{}).team||''
     }));
-    const localOnly=orders.filter(o=>o._local&&o.date===td&&!cloudOrders.find(c=>c.time===o.time&&Math.abs(c.amount-o.amount)<1&&(c.addedBy===o.addedBy||c.adminName===o.adminName)));
-    const otherDays=orders.filter(o=>o.date!==td&&!o._local);
-    orders=[...cloudOrders,...localOnly,...otherDays];
+    // เก็บ local orders ที่ยังไม่ขึ้น Cloud (ภายใน 30 วิ)
+    const recentLocal=orders.filter(o=>o._local&&Date.now()-o.id<30000);
+    orders=[...cloudOrders,...recentLocal];
     sv('cream_orders',orders);
+    // Debug info
     const myOrders=getVO();
-    if(dbg)dbg.textContent='✅ Cloud: '+cloudOrders.length+' ออเดอร์ | ของฉัน: '+myOrders.length+' | วันที่: '+td+' | ชื่อ: '+cu.name;
-    setTimeout(()=>{if(dbg)dbg.textContent=''},5000);
-    console.log('Auto-refresh: cloud='+cloudOrders.length+' myOrders='+myOrders.length+' date='+td+' cuName='+cu.name);
-    if(cloudOrders.length>0)console.log('Sample order adminName:',cloudOrders[0].adminName,'addedBy:',cloudOrders[0].addedBy);
+    if(dbg){
+      dbg.textContent='✅ Cloud:'+cloudOrders.length+' | ของฉัน:'+myOrders.length+' | '+td;
+      if(cloudOrders.length>0&&myOrders.length===0){
+        dbg.textContent+=' | ⚠️ adminName=['+cloudOrders[0].adminName+'] cu.name=['+cu.name+'] addedBy=['+cloudOrders[0].addedBy+'] cu.email=['+cu.email+']';
+      }
+      setTimeout(()=>{if(dbg)dbg.textContent=''},8000);
+    }
+    // อัปเดตหน้าจอ
     const cp=document.querySelector('.pg.ac');
     if(cp){
       const pid=cp.id.replace('pg-','');
@@ -838,7 +849,7 @@ async function autoRefreshFromCloud(force){
       if(pid==='home'){if(cu.role==='boss')renderBossHome(td);else renderAdminHome(td)}
       if(pid==='add'&&products.length>0)renderProdCards()
     }
-  }catch(e){if(dbg)dbg.textContent='❌ Error: '+e.message;console.log('Auto-refresh err:',e)}
+  }catch(e){if(dbg)dbg.textContent='❌ '+e.message;console.log('Refresh err:',e)}
 }
 function clearLocalData(){if(!confirm('ล้างข้อมูลทั้งหมดในเครื่อง?\n(สินค้า, ออเดอร์, ทีม)\n\nข้อมูลใน Cloud ไม่ถูกลบ\nLogin ใหม่จะดึงจาก Cloud'))return;['cream_products','cream_orders','cream_teams','cream_prodAssign'].forEach(k=>localStorage.removeItem(k));products=[];orders=[];showSuc('🗑️','ล้างแล้ว!','Login ใหม่เพื่อดึงข้อมูลจาก Cloud');setTimeout(()=>{hideSuc();doLogout()},2000)}
 async function testConnection(){showSuc('🔍','กำลังทดสอบ...','เชื่อมต่อ Google Sheets');try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();const pCount=data.products?data.products.length:0;const oCount=data.orders?data.orders.length:0;const uCount=data.users?data.users.length:0;const oSample=data.orders&&data.orders[0]?JSON.stringify(data.orders[0]).substring(0,100):'ไม่มี';showSuc('✅','เชื่อมต่อสำเร็จ!','สินค้า: '+pCount+'\nสมาชิก: '+uCount+'\nออเดอร์วันนี้: '+oCount+'\nตัวอย่าง: '+oSample);setTimeout(hideSuc,8000)}catch(e){showSuc('❌','เชื่อมต่อไม่ได้',e.message||'ตรวจสอบ URL');setTimeout(hideSuc,3000)}}
