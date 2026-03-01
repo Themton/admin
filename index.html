@@ -103,7 +103,7 @@ textarea.fi{min-height:80px;resize:vertical}
 
 <script>
 const API="https://script.google.com/macros/s/AKfycbzv2IPsFDga6PGV89AXdbjn_iNkVy_UzPHzbiJuj2J266pq0oAxDdrpyD3Rc3zrWZlK/exec";
-const VER='v15.6';
+const VER='v15.7';
 let cu=null,orders=[],products=[],users=[],teams=[];
 let selP=null,bD='',fProd='ทั้งหมด',fAdm='ทั้งหมด',cPg='';
 
@@ -287,7 +287,17 @@ function nav(p){
   rP();FC(cu.role==='boss'?bD||null:null);
   window.scrollTo(0,0);
 }
-function rP(){if(cPg==='home')rHome();if(cPg==='orders')rOrd();if(cPg==='add')rAdd()}
+function rP(){
+  if(cPg==='home')rHome();
+  if(cPg==='orders')rOrd();
+  if(cPg==='add'){
+    // ถ้ากำลังกรอกอยู่ → ไม่ render ใหม่
+    const active=document.activeElement;
+    if(active&&(active.id==='iDt'||active.id==='iPr'))return;
+    if(selP)return; // เลือกสินค้าแล้ว → ไม่ render ทับ
+    rAdd();
+  }
+}
 
 // ===== HOME =====
 function rHome(){
