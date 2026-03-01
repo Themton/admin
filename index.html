@@ -103,7 +103,7 @@ textarea.fi{min-height:80px;resize:vertical}
 
 <script>
 const API="https://script.google.com/macros/s/AKfycbxjDp0iwV7YwGxTVhPvLd__UoTHg0-_RNOQM_LvIsCBshEUABYkFt8TqMzWLUwLiYx0/exec";
-const VER='v15.4';
+const VER='v15.5';
 let cu=null,orders=[],products=[],users=[],teams=[];
 let selP=null,bD='',fProd='ทั้งหมด',fAdm='ทั้งหมด',cPg='';
 
@@ -345,9 +345,9 @@ function rAdd(){
   if(!products.length)h+=`<div style="grid-column:span 2;text-align:center;padding:30px;color:#ccc">ยังไม่มีสินค้า</div>`;
   else products.forEach(p=>{h+=`<div class="pc ${selP===p.id?'sel':''}" onclick="sePr('${p.id}',this)"><div class="pn">${p.name}</div></div>`});
   h+=`</div><div id="fA" style="display:${selP?'block':'none'}">
-    <div class="fg"><label>💰 ราคา</label><input class="fi" id="iPr" type="number" inputmode="decimal" placeholder="0"></div>
     <div class="fg"><label>📝 รายละเอียด (ใส่เบอร์โทรด้วย)</label><textarea class="fi" id="iDt" placeholder="ชื่อลูกค้า 0812345678" oninput="cPh()"></textarea></div>
     <div id="phI"></div>
+    <div class="fg"><label>💰 ราคา</label><input class="fi" id="iPr" type="number" inputmode="decimal" placeholder="0"></div>
     <div class="slb" onclick="document.getElementById('slF').click()">📸 แนบสลิป (ไม่บังคับ)</div>
     <input type="file" id="slF" accept="image/*" style="display:none" onchange="hSl(this)">
     <img id="slPv" class="slp" style="display:none">
@@ -357,17 +357,17 @@ function rAdd(){
   if(window._at)clearInterval(window._at);
   window._at=setInterval(()=>{const e=document.getElementById('aT');if(e)e.textContent=fT(new Date())},1000);
 }
-function sePr(id,el){selP=id;document.querySelectorAll('.pc').forEach(e=>e.classList.remove('sel'));el.classList.add('sel');document.getElementById('fA').style.display='block';document.getElementById('iPr').focus()}
+function sePr(id,el){selP=id;document.querySelectorAll('.pc').forEach(e=>e.classList.remove('sel'));el.classList.add('sel');document.getElementById('fA').style.display='block';document.getElementById('iDt').focus()}
 function cPh(){const t=document.getElementById('iDt').value,i=document.getElementById('phI'),m=t.match(/0[689]\d{8}/);
   if(m)i.innerHTML=`<div class="phb ok">📞 ${m[0]}</div>`;else if(t.length>3)i.innerHTML=`<div class="phb err">⚠️ ยังไม่พบเบอร์โทร</div>`;else i.innerHTML=''}
 function hSl(inp){if(!inp.files[0])return;const r=new FileReader();r.onload=e=>{window._slip=e.target.result;document.getElementById('slPv').src=e.target.result;document.getElementById('slPv').style.display='block'};r.readAsDataURL(inp.files[0])}
 
 async function subO(){
   if(!selP)return;const p=products.find(x=>x.id===selP);if(!p)return;
-  const pr=parseFloat(document.getElementById('iPr').value)||0;if(!pr){document.getElementById('iPr').focus();return}
   const dt=document.getElementById('iDt').value.trim();if(!dt){document.getElementById('iDt').focus();return}
   const ph=(dt.match(/0[689]\d{8}/)||[''])[0];
   if(!ph){st('⚠️ กรุณาใส่เบอร์โทร 10 หลัก','#FFEBEE');document.getElementById('iDt').focus();return}
+  const pr=parseFloat(document.getElementById('iPr').value)||0;if(!pr){document.getElementById('iPr').focus();return}
   const btn=document.getElementById('sBtn');btn.disabled=true;btn.textContent='⏳ กำลังบันทึก...';
   const n=new Date(),sl=window._slip||'';
   const o={date:fD(n),time:fT(n),productName:p.name,price:pr,amount:pr,phone:ph,detail:dt,addedBy:cu.email,adminName:cu.name,adminEmail:cu.email,team:cu.team,_local:true,_ts:Date.now()};
