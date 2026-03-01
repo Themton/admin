@@ -9,7 +9,7 @@
 <script>
 // บังคับ reload ทันทีถ้าเวอร์ชันเก่า (ก่อนโหลดอย่างอื่น)
 (function(){
-  var CV='v14.2';
+  var CV='v15.0';
   var sv=localStorage.getItem('cream_ver');
   if(sv && sv!==CV){
     localStorage.setItem('cream_ver',CV);
@@ -286,7 +286,7 @@ body.boss-mode #stickySubmit button{max-width:600px}
 <div id="modalC"></div>
 
 <script>
-const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbz-ffCk5cGIfHr7BCeBMJM9svCIenidFVMcIYz6AKkSJPDxQdXrqAswlr97DtnkLB37/exec";
+const APPS_SCRIPT_URL="https://script.google.com/macros/s/AKfycbwiYjuC08uADSgjHbXQX5FAEug4Kw7XKGhkrcrUMDXGe_R8ZICCNTg69J2n7JOEZA/exec";
 
 const DEFAULT_USERS=[
   {email:"boss@hotmail.com",pin:"0000",name:"หัวหน้า",role:"boss",team:"ทั้งหมด"},
@@ -982,7 +982,7 @@ function hideSuc(){document.getElementById('sucOv').style.display='none'}
 
 document.addEventListener('DOMContentLoaded',()=>{
   // === Auto-Update System ===
-  const APP_VER='v14.2';
+  const APP_VER='v15.0';
   window._APP_VER=APP_VER;
   // อัปเดตเวอร์ชัน (ไม่ลบข้อมูลสินค้า)
   if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.removeItem('cream_orders');localStorage.setItem('cream_ver',APP_VER);console.log('Updated to '+APP_VER+' - cleared old orders')}
