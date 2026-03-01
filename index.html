@@ -101,8 +101,8 @@ textarea.fi{min-height:80px;resize:vertical}
 <div class="suc-ov" id="sOv"><div style="font-size:48px" id="sIc"></div><div style="font-size:18px;font-weight:700" id="sMs"></div><div style="font-size:13px;color:#888;margin-top:4px;white-space:pre-line" id="sSb"></div></div>
 
 <script>
-const API="https://script.google.com/macros/s/AKfycbwiYjuC08uADSgjHbXQX5FAEug4Kw7XKGhkrcrUMDXGe_R8ZICCNTg69J2n7JOEZA/exec";
-const VER='v15.0';
+const API="https://script.google.com/macros/s/AKfycbzXBDjgXus4jNWHdKi3vnF30xYbN15Q1U6buMcVvqaqeTW4dGG65RC2I0vbQ4V-MQp8/exec";
+const VER='v15.2';
 let cu=null,orders=[],products=[],users=[],teams=[];
 let selP=null,bD='',fProd='ทั้งหมด',fAdm='ทั้งหมด',cPg='';
 
@@ -129,14 +129,47 @@ async function FC(date){
     }
     if(d.orders){
       const co=d.orders.map(o=>({...o,date:nD(o.date),amount:Number(o.amount)||0,phone:o.phone?String(o.phone):'',team:(users.find(u=>u.email===o.adminEmail)||{}).team||''}));
-      const pend=orders.filter(o=>o._local&&o._ts&&Date.now()-o._ts<10000);
+      // เก็บ pending 2 นาที แต่ลบถ้า Cloud มีแล้ว (match time+amount+admin)
+      const pend=orders.filter(o=>{
+        if(!o._local||!o._ts)return false;
+        if(Date.now()-o._ts>120000)return false; // หมดเวลา 2 นาที
+        // ถ้า Cloud มี order ที่ตรงกัน → ไม่ต้องเก็บ pending
+        const dup=co.find(c=>c.time===o.time&&Math.abs(c.amount-o.amount)<1&&(c.adminName===o.adminName||c.adminEmail===o.adminEmail));
+        return !dup;
+      });
       orders=[...co,...pend];
     }
-    st('✅ โหลดแล้ว ('+orders.length+' รายการ)','#E8F5E9');
+    st('✅ Cloud:'+orders.length+' รายการ (☁️'+((d.orders||[]).length)+')','#E8F5E9');
     rP();
   }catch(e){st('❌ '+e.message,'#FFEBEE')}
 }
-async function PC(body){try{await fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body)})}catch(e){}}
+async function PC(body){
+  const data=JSON.stringify(body);
+  // วิธี 1: fetch ปกติ (ถ้า CORS ใช้ได้)
+  try{
+    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:data,redirect:'follow'});
+    const t=await r.text();
+    console.log('POST ok:',t.substring(0,100));
+    return true;
+  }catch(e){console.log('POST cors fail, trying beacon:',e.message)}
+  // วิธี 2: sendBeacon (ทำงานได้แม้ redirect)
+  try{
+    const ok=navigator.sendBeacon(API,new Blob([data],{type:'text/plain'}));
+    console.log('Beacon:',ok);
+    if(ok)return true;
+  }catch(e){console.log('Beacon fail:',e.message)}
+  // วิธี 3: form submit via iframe
+  try{
+    const f=document.createElement('form');f.method='POST';f.action=API;f.target='_pcframe';f.style.display='none';
+    const i=document.createElement('input');i.name='data';i.value=data;f.appendChild(i);
+    let ifr=document.getElementById('_pcframe');
+    if(!ifr){ifr=document.createElement('iframe');ifr.name='_pcframe';ifr.id='_pcframe';ifr.style.display='none';document.body.appendChild(ifr)}
+    document.body.appendChild(f);f.submit();f.remove();
+    console.log('Form submit done');
+    return true;
+  }catch(e){console.log('Form fail:',e.message)}
+  return false;
+}
 
 // ===== AUTH =====
 function doLogin(){
@@ -233,7 +266,8 @@ function rHome(){
     if(to.length){
       h+=`<span style="font-size:14px;font-weight:700;display:block;margin:16px 0 8px">รายการล่าสุด</span>`;
       to.slice(0,5).forEach(o=>{
-        h+=`<div class="oi"><div class="ol"><div class="op">${o.productName}</div><div class="od">${o.time} • ${o.phone||''}</div></div><div><div class="opr">฿${o.amount.toLocaleString()}</div></div></div>`;
+        const isPend=o._local?'<span style="background:#FFF3E0;color:#E65100;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px">⏳รอ</span>':'';
+        h+=`<div class="oi"><div class="ol"><div class="op">${o.productName}${isPend}</div><div class="od">${o.time} • ${o.phone||''}</div></div><div><div class="opr">฿${o.amount.toLocaleString()}</div></div></div>`;
       });
     }
     pg.innerHTML=h;
@@ -277,11 +311,17 @@ async function subO(){
   const n=new Date(),sl=window._slip||'';
   const o={date:fD(n),time:fT(n),productName:p.name,price:pr,amount:pr,phone:ph,detail:dt,addedBy:cu.email,adminName:cu.name,adminEmail:cu.email,team:cu.team,_local:true,_ts:Date.now()};
   orders.unshift(o);
-  PC({action:'addOrder',...o,slip:sl});
+  // ส่งไป Cloud (รอจนส่งเสร็จ)
+  const sent=await PC({action:'addOrder',...o,slip:sl});
   selP=null;window._slip=null;
-  sS('✅','บันทึกสำเร็จ!',p.name+' ฿'+pr.toLocaleString()+(ph?' | 📞'+ph:''));
+  if(sent){
+    sS('✅','บันทึกสำเร็จ!',p.name+' ฿'+pr.toLocaleString()+(ph?' | 📞'+ph:''));
+  }else{
+    sS('⚠️','บันทึกแล้ว (รอส่ง Cloud)',p.name+' ฿'+pr.toLocaleString());
+  }
   setTimeout(()=>{hS();rAdd()},1200);
-  setTimeout(()=>FC(),4000);
+  // ดึง Cloud หลายรอบจนกว่าจะเจอ
+  [3000,8000,20000,40000].forEach(ms=>setTimeout(()=>FC(),ms));
 }
 
 // ===== ORDERS =====
@@ -302,7 +342,8 @@ function rOrd(){
   if(cu.role==='boss'&&ans.length>1)h+=`<div class="chips">${ans.map(n=>`<div class="chip ${fAdm===n?'ac':''}" onclick="fAdm='${n}';rOrd()">${n}</div>`).join('')}</div>`;
   if(!mo.length)h+=`<div style="text-align:center;padding:40px;color:#ccc">ไม่มีรายการ</div>`;
   else mo.forEach(o=>{
-    h+=`<div class="oi"><div class="ol"><div class="op">${o.productName} ${o.slip?'📸':''}</div><div class="od">${o.time} • ${o.phone||'-'} ${cu.role==='boss'?'• '+o.adminName:''}</div></div><div><div class="opr">฿${o.amount.toLocaleString()}</div><div class="on">#${o.dailyNo||'-'}</div></div></div>`;
+    const isPend=o._local?'<span style="background:#FFF3E0;color:#E65100;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px">⏳รอ</span>':'';
+    h+=`<div class="oi"><div class="ol"><div class="op">${o.productName} ${o.slip?'📸':''}${isPend}</div><div class="od">${o.time} • ${o.phone||'-'} ${cu.role==='boss'?'• '+o.adminName:''}</div></div><div><div class="opr">฿${o.amount.toLocaleString()}</div><div class="on">#${o.dailyNo||'-'}</div></div></div>`;
   });
   pg.innerHTML=h;
 }
