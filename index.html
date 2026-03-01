@@ -6,6 +6,18 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<script>
+// บังคับ reload ทันทีถ้าเวอร์ชันเก่า (ก่อนโหลดอย่างอื่น)
+(function(){
+  var CV='v14.1-cloud';
+  var sv=localStorage.getItem('cream_ver');
+  if(sv && sv!==CV){
+    localStorage.setItem('cream_ver',CV);
+    localStorage.removeItem('cream_orders');
+    window.location.reload(true);
+  }
+})();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="ADMIN THEMT">
@@ -355,16 +367,12 @@ function showApp(){
   document.getElementById('topNm').textContent=cu.name;
   const r=document.getElementById('topRl');if(cu.role==='boss'){r.textContent='หัวหน้า';r.className='trole rb'}else{r.textContent='แอดมิน';r.className='trole ra'}
   document.getElementById('topTm').textContent=cu.team!=='ทั้งหมด'?cu.team:'';buildNav();
-  // แสดงหน้าทันที ไม่รอ Cloud
+  // แสดงหน้าทันที → nav จะดึง Cloud อัตโนมัติ
   nav(cu.role==='boss'?'home':'add');
-  // Boss: sync ทุกอย่างขึ้น Cloud อัตโนมัติทุกครั้ง
+  // Boss: sync สินค้า+สมาชิก ขึ้น Cloud
   if(cu.role==='boss'){
-    setTimeout(()=>{syncProducts();syncUsers();console.log('Auto-sync ALL to Cloud')},1000);
+    setTimeout(()=>{syncProducts();syncUsers()},1000);
   }
-  // Admin: ดึงข้อมูลจาก Cloud ทันที (Boss ใช้ fetchBossData จาก updateHome แทน)
-  if(cu.role!=='boss') autoRefreshFromCloud(true);
-  // โหลด Cloud ใน background
-  loadProductsFromSheets().then(()=>{if(cu.role!=='boss'&&products.length>0)renderProdCards()});
 }
 function buildNav(){
   const b=cu.role==='boss';
@@ -389,7 +397,7 @@ function nav(p){
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('ac'));const el=document.getElementById('pg-'+p);if(el)el.classList.add('ac');
   document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('ac',b.dataset.p===p));
   document.getElementById('stickySubmit').style.display=p==='add'?'block':'none';
-  if(p==='home'){updateHome()}if(p==='add'){initAddPage();loadProductsFromSheets().then(()=>renderProdCards())}if(p==='orders'){renderOrd();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderOrd()})}else{autoRefreshFromCloud(true)}}if(p==='dash'){buildDF();renderDash();if(cu.role==='boss'){fetchBossData().then(()=>{mergeSheetsOrders();renderDash()})}}if(p==='settings'){renderProdMgmt();renderTeam()}window.scrollTo(0,0);
+  if(p==='home'){updateHome()}if(p==='add'){initAddPage();fetchCloud()}if(p==='orders'){renderOrd();fetchCloud(bossViewDate||null)}if(p==='dash'){buildDF();renderDash();fetchCloud(bossViewDate||null)}if(p==='settings'){renderProdMgmt();renderTeam()}window.scrollTo(0,0);
 }
 
 // รวมออเดอร์จาก Sheets เข้า orders (สำหรับ boss)
@@ -435,43 +443,16 @@ function setBossDate(mode){
   document.getElementById('bdLabel').textContent=bossViewDate||fD(now);
   updateHome();
 }
-async function fetchBossData(){
-  if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;
-  const dbg=document.getElementById('debugBanner');
-  try{
-    if(dbg)dbg.textContent='⏳ Boss กำลังดึงข้อมูล...';
-    const dateParam=bossViewDate?`?date=${encodeURIComponent(bossViewDate)}`:'';
-    const res=await fetch(APPS_SCRIPT_URL+dateParam);
-    sheetsData=await res.json();
-    if(sheetsData&&sheetsData.orders){
-      const today=fD(new Date());
-      const td=bossViewDate||today;
-      const co=sheetsData.orders.map(so=>({id:Date.now()+Math.random(),dailyNo:so.dailyNo||0,date:normDate(so.date),time:so.time||'',productName:so.productName||'',price:so.amount||0,qty:1,amount:so.amount||0,phone:so.phone||'',detail:so.detail||'',addedBy:so.adminEmail||'',adminName:so.adminName||'',team:(users.find(u=>u.email===so.adminEmail)||{}).team||''}));
-      const localOnly=orders.filter(o=>o._local&&o.date===td&&!co.find(c=>c.time===o.time&&Math.abs(c.amount-o.amount)<1&&(c.addedBy===o.addedBy||c.adminName===o.adminName)));
-      const otherDays=orders.filter(o=>o.date!==td);
-      orders=[...co,...localOnly,...otherDays];
-      sv('cream_orders',orders);
-      if(dbg)dbg.textContent='✅ Boss: Cloud='+co.length+' ออเดอร์ | วันที่='+td+(sheetsData.error?' | ❌'+sheetsData.error:'');
-      setTimeout(()=>{if(dbg)dbg.textContent=''},5000);
-    }else{
-      if(dbg)dbg.textContent='⚠️ Cloud ไม่มีออเดอร์ | error='+(sheetsData?sheetsData.error||'ไม่มี':'response ว่าง');
-      setTimeout(()=>{if(dbg)dbg.textContent=''},5000);
-    }
-  }catch(e){if(dbg)dbg.textContent='❌ Boss fetch error: '+e.message;console.log("Fetch:",e)}
-}
 function updateHome(){
   const td=bossViewDate||fD(new Date());
   document.getElementById('hRole').textContent=cu.role==='boss'?'👑 Boss Dashboard':'👤 '+cu.name;
-  
   if(cu.role==='boss'){
     document.getElementById('bossDatePicker').style.display='block';
     document.getElementById('bdLabel').textContent=td;
-    fetchBossData().then(()=>renderBossHome(td));
-    renderBossHome(td);
   }else{
     document.getElementById('bossDatePicker').style.display='none';
-    renderAdminHome(td);
   }
+  fetchCloud(bossViewDate||null);
 }
 
 function renderAdminHome(td){
@@ -790,7 +771,7 @@ function checkDetail(){
   else{err.textContent='';document.getElementById('inDetail').style.borderColor='var(--gr)'}
   updateSummary();
 }
-async function submitOrd(){if(!selProd)return;const p=products.find(x=>x.id===selProd);const price=parseFloat(document.getElementById('inPrice').value)||0;if(!price){document.getElementById('inPrice').focus();return}const detail=document.getElementById('inDetail').value.trim();if(!detail){document.getElementById('detailErr').textContent='⚠️ กรุณากรอกรายละเอียดก่อนบันทึก';document.getElementById('inDetail').style.borderColor='var(--rd)';document.getElementById('inDetail').focus();return}const phone=extractPhone(detail)||'';if(!phone){document.getElementById('inDetail').focus();checkDetail();const pr=analyzePhone(detail);if(pr.s==='none')showPhoneToast('err','❌','ไม่พบเบอร์โทร!','กรุณาใส่เบอร์โทร 10 หลัก ขึ้นต้น 0');return}const now=new Date(),td=fD(now);const btn=document.getElementById('subBtn');btn.disabled=true;btn.textContent='⏳ กำลังบันทึก...';const slip=window._slipData||'';const o={id:Date.now(),dailyNo:getDailyNo(td),date:td,time:fT(now),productName:p.name,price:price,qty:1,amount:price,phone:phone,detail:detail,slip:slip?'มีสลิป':'',addedBy:cu.email,adminName:cu.name,team:cu.team,_local:true};orders.unshift(o);sv('cream_orders',orders);window._lastSubmit=Date.now();sendToSheets(o,slip);selProd=null;qty=1;initAddPage();showSuc('✅','บันทึกสำเร็จ!',`${p.name} ฿${price.toLocaleString()}${phone?' | 📞'+phone:''}${slip?' | 📸สลิป':''}`);setTimeout(hideSuc,800)}
+async function submitOrd(){if(!selProd)return;const p=products.find(x=>x.id===selProd);const price=parseFloat(document.getElementById('inPrice').value)||0;if(!price){document.getElementById('inPrice').focus();return}const detail=document.getElementById('inDetail').value.trim();if(!detail){document.getElementById('detailErr').textContent='⚠️ กรุณากรอกรายละเอียดก่อนบันทึก';document.getElementById('inDetail').style.borderColor='var(--rd)';document.getElementById('inDetail').focus();return}const phone=extractPhone(detail)||'';if(!phone){document.getElementById('inDetail').focus();checkDetail();const pr=analyzePhone(detail);if(pr.s==='none')showPhoneToast('err','❌','ไม่พบเบอร์โทร!','กรุณาใส่เบอร์โทร 10 หลัก ขึ้นต้น 0');return}const now=new Date(),td=fD(now);const btn=document.getElementById('subBtn');btn.disabled=true;btn.textContent='⏳ กำลังบันทึก...';const slip=window._slipData||'';const o={id:Date.now(),dailyNo:getDailyNo(td),date:td,time:fT(now),productName:p.name,price:price,qty:1,amount:price,phone:phone,detail:detail,slip:slip?'มีสลิป':'',addedBy:cu.email,adminName:cu.name,team:cu.team,_local:true,_ts:Date.now()};orders.unshift(o);sendToSheets(o,slip);setTimeout(()=>fetchCloud(),5000);selProd=null;qty=1;initAddPage();showSuc('✅','บันทึกสำเร็จ!',`${p.name} ฿${price.toLocaleString()}${phone?' | 📞'+phone:''}${slip?' | 📸สลิป':''}`);setTimeout(hideSuc,800)}
 
 // SEND TO SHEETS
 async function sendToSheets(o,slip){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;try{const body=JSON.stringify({action:"addOrder",id:o.id,dailyNo:o.dailyNo,date:o.date,time:o.time,productName:o.productName,price:o.price,amount:o.amount,phone:o.phone||"",detail:o.detail,slip:slip||"",addedBy:o.addedBy,adminName:o.adminName,team:o.team});await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body});console.log("Order sent to Sheets")}catch(e){console.log("Sheets:",e)}}
@@ -799,15 +780,17 @@ async function sendToSheets(o,slip){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))r
 function syncProducts(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;const body=JSON.stringify({action:"saveProducts",products:products.map(p=>({id:p.id,name:p.name}))});fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body}).then(()=>console.log("SyncProducts sent")).catch(e=>console.log("SyncProducts err:",e))}
 function syncUsers(){if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;const body=JSON.stringify({action:"saveUsers",users:users.map(u=>({email:u.email,pin:u.pin,name:u.name,role:u.role,team:u.team}))});fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:body}).then(()=>console.log("SyncUsers sent")).catch(e=>console.log("SyncUsers err:",e))}
 async function forceSyncToSheets(){showSuc('☁️','กำลัง Sync...','อัปโหลดข้อมูล');try{syncProducts();syncUsers();showSuc('✅','Sync สำเร็จ!','สินค้า '+products.length+' รายการ\nรอ 5 วิ แล้วให้แอดมิน logout/login ใหม่');setTimeout(hideSuc,4000)}catch(e){showSuc('❌','Sync ไม่สำเร็จ',e.message||'ลองใหม่');setTimeout(hideSuc,3000)}}
-async function pullFromCloud(){showSuc('⬇️','กำลังดึงข้อมูล...','จาก Google Sheets');try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();if(data.products){products=data.products.map(p=>({id:p.id,name:p.name,short:p.name,price:0,icon:'',sheet:p.name,sku:'',img:''}));sv('cream_products',products)}if(data.users){users=data.users;sv('cream_users',users)}orders=[];sv('cream_orders',orders);showSuc('✅','ดึงข้อมูลสำเร็จ!','สินค้า: '+products.length+' | สมาชิก: '+users.length+'\nออเดอร์ในเครื่องถูกล้าง');setTimeout(()=>{hideSuc();nav('settings')},2000)}catch(e){showSuc('❌','ดึงไม่สำเร็จ',e.message||'ลองใหม่');setTimeout(hideSuc,3000)}}
-async function autoRefreshFromCloud(force){
-  if(!force&&window._lastSubmit&&Date.now()-window._lastSubmit<10000)return;
+async function pullFromCloud(){showSuc('⬇️','กำลังดึงข้อมูล...','จาก Google Sheets');try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();if(data.products){products=data.products.map(p=>({id:p.id,name:p.name,short:p.name,price:0,icon:'',sheet:p.name,sku:'',img:''}));sv('cream_products',products)}if(data.users){users=data.users;sv('cream_users',users)}orders=[];showSuc('✅','ดึงข้อมูลสำเร็จ!','สินค้า: '+products.length+' | สมาชิก: '+users.length+'\nออเดอร์ในเครื่องถูกล้าง');setTimeout(()=>{hideSuc();nav('settings')},2000)}catch(e){showSuc('❌','ดึงไม่สำเร็จ',e.message||'ลองใหม่');setTimeout(hideSuc,3000)}}
+// ===== CLOUD-FIRST: ฟังก์ชันเดียวดึงทุกอย่างจาก Cloud =====
+async function fetchCloud(date){
+  if(APPS_SCRIPT_URL.includes("YOUR_GOOGLE"))return;
   const dbg=document.getElementById('debugBanner');
   try{
     if(dbg)dbg.textContent='⏳ กำลังดึงข้อมูล...';
-    const url=APPS_SCRIPT_URL;
-    const res=await fetch(url);
+    const dateParam=date?'?date='+encodeURIComponent(date):'';
+    const res=await fetch(APPS_SCRIPT_URL+dateParam);
     const data=await res.json();
+    if(data.error){if(dbg)dbg.textContent='❌ Cloud error: '+data.error;return}
     sheetsData=data;
     // อัปเดตสินค้า
     if(data.products&&data.products.length>0){
@@ -818,46 +801,45 @@ async function autoRefreshFromCloud(force){
     if(data.users&&data.users.length>0){
       users=data.users;sv('cream_users',users);
     }
-    // อัปเดตออเดอร์ - ใช้ Cloud เป็นหลัก
-    const td=fD(new Date());
+    // อัปเดตออเดอร์จาก Cloud 100%
+    const td=date||fD(new Date());
     const cloudOrders=(data.orders||[]).map(so=>({
-      id:'cloud_'+Math.random(),
-      dailyNo:so.dailyNo||0,
-      date:normDate(so.date),
-      time:String(so.time||''),
-      productName:so.productName||'',
-      price:Number(so.amount)||0,
-      qty:1,
-      amount:Number(so.amount)||0,
-      phone:so.phone?String(so.phone):'',
-      detail:so.detail||'',
-      addedBy:so.adminEmail||'',
-      adminName:so.adminName||'',
+      id:'c'+Math.random(),dailyNo:so.dailyNo||0,date:normDate(so.date),
+      time:String(so.time||''),productName:so.productName||'',
+      price:Number(so.amount)||0,qty:1,amount:Number(so.amount)||0,
+      phone:so.phone?String(so.phone):'',detail:so.detail||'',
+      addedBy:so.adminEmail||'',adminName:so.adminName||'',
       team:(users.find(u=>u.email===so.adminEmail)||{}).team||''
     }));
-    // เก็บ local orders ที่ยังไม่ขึ้น Cloud (ภายใน 30 วิ)
-    const recentLocal=orders.filter(o=>o._local&&Date.now()-o.id<30000);
-    orders=[...cloudOrders,...recentLocal];
-    sv('cream_orders',orders);
-    // Debug info
-    const myOrders=getVO();
+    // เก็บเฉพาะ local ที่เพิ่งส่ง (ยังไม่ถึง Cloud)
+    const pending=orders.filter(o=>o._local&&o._ts&&Date.now()-o._ts<15000);
+    orders=[...cloudOrders,...pending];
     if(dbg){
-      dbg.textContent='✅ Cloud:'+cloudOrders.length+' | ของฉัน:'+myOrders.length+' | '+td;
-      if(cloudOrders.length>0&&myOrders.length===0){
-        dbg.textContent+=' | ⚠️ adminName=['+cloudOrders[0].adminName+'] cu.name=['+cu.name+'] addedBy=['+cloudOrders[0].addedBy+'] cu.email=['+cu.email+']';
-      }
-      setTimeout(()=>{if(dbg)dbg.textContent=''},8000);
+      const my=getVO();
+      dbg.textContent='✅ Cloud:'+cloudOrders.length+' | ของฉัน:'+my.length+' | '+td;
+      setTimeout(()=>{if(dbg)dbg.textContent=''},5000);
     }
     // อัปเดตหน้าจอ
-    const cp=document.querySelector('.pg.ac');
-    if(cp){
-      const pid=cp.id.replace('pg-','');
-      if(pid==='orders')renderOrd();
-      if(pid==='home'){if(cu.role==='boss')renderBossHome(td);else renderAdminHome(td)}
-      if(pid==='add'&&products.length>0)renderProdCards()
-    }
-  }catch(e){if(dbg)dbg.textContent='❌ '+e.message;console.log('Refresh err:',e)}
+    refreshCurrentPage(td);
+  }catch(e){if(dbg)dbg.textContent='❌ '+e.message;console.log('fetchCloud err:',e)}
 }
+// อัปเดตหน้าจอที่เปิดอยู่
+function refreshCurrentPage(td){
+  td=td||bossViewDate||fD(new Date());
+  const cp=document.querySelector('.pg.ac');
+  if(!cp)return;
+  const pid=cp.id.replace('pg-','');
+  if(pid==='orders')renderOrd();
+  if(pid==='home'){
+    document.getElementById('hRole').textContent=cu.role==='boss'?'👑 Boss Dashboard':'👤 '+cu.name;
+    if(cu.role==='boss'){renderBossHome(td)}else{renderAdminHome(td)}
+  }
+  if(pid==='add'&&products.length>0)renderProdCards();
+  if(pid==='dash'){buildDF();renderDash()}
+}
+// Alias สำหรับ compatibility
+async function autoRefreshFromCloud(force){return fetchCloud(bossViewDate||null)}
+async function fetchBossData(){return fetchCloud(bossViewDate||null)}
 function clearLocalData(){if(!confirm('ล้างข้อมูลทั้งหมดในเครื่อง?\n(สินค้า, ออเดอร์, ทีม)\n\nข้อมูลใน Cloud ไม่ถูกลบ\nLogin ใหม่จะดึงจาก Cloud'))return;['cream_products','cream_orders','cream_teams','cream_prodAssign'].forEach(k=>localStorage.removeItem(k));products=[];orders=[];showSuc('🗑️','ล้างแล้ว!','Login ใหม่เพื่อดึงข้อมูลจาก Cloud');setTimeout(()=>{hideSuc();doLogout()},2000)}
 async function testConnection(){showSuc('🔍','กำลังทดสอบ...','เชื่อมต่อ Google Sheets');try{const res=await fetch(APPS_SCRIPT_URL);const data=await res.json();const pCount=data.products?data.products.length:0;const oCount=data.orders?data.orders.length:0;const uCount=data.users?data.users.length:0;const oSample=data.orders&&data.orders[0]?JSON.stringify(data.orders[0]).substring(0,100):'ไม่มี';showSuc('✅','เชื่อมต่อสำเร็จ!','สินค้า: '+pCount+'\nสมาชิก: '+uCount+'\nออเดอร์วันนี้: '+oCount+'\nตัวอย่าง: '+oSample);setTimeout(hideSuc,8000)}catch(e){showSuc('❌','เชื่อมต่อไม่ได้',e.message||'ตรวจสอบ URL');setTimeout(hideSuc,3000)}}
 
@@ -974,7 +956,7 @@ function doDelMem(em){const u=users.find(x=>x.email===em);if(!u||u.role==='boss'
 function showAddTeam(){document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box"><div class="mf-title">🏷️ สร้างทีม <button class="mf-close" onclick="closeM()">✕</button></div><input class="mf-input" id="tNm" placeholder="ชื่อทีม"><button class="mf-btn" onclick="doAddTeam()">✅ สร้าง</button><div class="lerr" id="tErr" style="margin-top:8px"></div></div></div>`}
 function doAddTeam(){const nm=document.getElementById('tNm').value.trim();if(!nm){document.getElementById('tErr').textContent='ใส่ชื่อ';return}if(teams.includes(nm)){document.getElementById('tErr').textContent='มีแล้ว';return}teams.push(nm);sv('cream_teams',teams);closeM();renderTeam();showSuc('✅','สำเร็จ!','');setTimeout(hideSuc,1200)}
 function showEditTeam(nm){const mc=users.filter(u=>u.team===nm).length;document.getElementById('modalC').innerHTML=`<div class="modal-form" ><div class="mf-box"><div class="mf-title">✏️ ทีม <button class="mf-close" onclick="closeM()">✕</button></div><input class="mf-input" id="etNm" value="${nm}"><button class="mf-btn" onclick="doRenTeam('${nm}')">💾 เปลี่ยนชื่อ</button>${mc===0?`<button class="mf-btn danger" onclick="doDelTeam('${nm}')">🗑️ ลบ</button>`:''}</div></div>`}
-function doRenTeam(old){const nw=document.getElementById('etNm').value.trim();if(!nw)return;const i=teams.indexOf(old);if(i<0)return;teams[i]=nw;users.forEach(u=>{if(u.team===old)u.team=nw});orders.forEach(o=>{if(o.team===old)o.team=nw});sv('cream_teams',teams);sv('cream_users',users);sv('cream_orders',orders);syncUsers();closeM();renderTeam();showSuc('✅','สำเร็จ!',`${old} → ${nw}`);setTimeout(hideSuc,1200)}
+function doRenTeam(old){const nw=document.getElementById('etNm').value.trim();if(!nw)return;const i=teams.indexOf(old);if(i<0)return;teams[i]=nw;users.forEach(u=>{if(u.team===old)u.team=nw});orders.forEach(o=>{if(o.team===old)o.team=nw});sv('cream_teams',teams);sv('cream_users',users);syncUsers();closeM();renderTeam();showSuc('✅','สำเร็จ!',`${old} → ${nw}`);setTimeout(hideSuc,1200)}
 function doDelTeam(nm){if(!confirm(`ลบ "${nm}"?`))return;teams=teams.filter(t=>t!==nm);sv('cream_teams',teams);closeM();renderTeam()}
 function closeM(){document.getElementById('modalC').innerHTML=''}
 let _ptTimer=null;
@@ -1000,13 +982,13 @@ function hideSuc(){document.getElementById('sucOv').style.display='none'}
 
 document.addEventListener('DOMContentLoaded',()=>{
   // === Auto-Update System ===
-  const APP_VER='v13.0';
+  const APP_VER='v14.1-cloud';
   window._APP_VER=APP_VER;
   // อัปเดตเวอร์ชัน (ไม่ลบข้อมูลสินค้า)
-  if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.setItem('cream_ver',APP_VER);console.log('Updated to '+APP_VER)}
+  if(localStorage.getItem('cream_ver')!==APP_VER){localStorage.removeItem('cream_orders');localStorage.setItem('cream_ver',APP_VER);console.log('Updated to '+APP_VER+' - cleared old orders')}
   // ลบ service worker เก่า
   if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(r=>{r.forEach(w=>w.unregister())})}
-  users=ld('cream_users',DEFAULT_USERS);teams=ld('cream_teams',['ทีม A','ทีม B']);orders=ld('cream_orders',[]);products=ld('cream_products',DEFAULT_PRODUCTS);productAssign=ld('cream_prodAssign',{});
+  users=ld('cream_users',DEFAULT_USERS);teams=ld('cream_teams',['ทีม A','ทีม B']);orders=[];products=ld('cream_products',DEFAULT_PRODUCTS);productAssign=ld('cream_prodAssign',{});
   checkSession();
   document.getElementById('loginPin').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
   document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPin').focus()});
@@ -1022,15 +1004,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   },30000);
 
   // === Auto-Sync ทุก 60 วิ ===
-  // Boss: push + fetchBossData | Admin: autoRefreshFromCloud
-  setInterval(async()=>{
+  setInterval(()=>{
     if(!cu)return;
-    if(cu.role==='boss'){
-      syncProducts();syncUsers();
-      fetchBossData().then(()=>{const td=bossViewDate||fD(new Date());renderBossHome(td)});
-    }else{
-      autoRefreshFromCloud();
-    }
+    if(cu.role==='boss'){syncProducts();syncUsers()}
+    fetchCloud(bossViewDate||null);
   },60000);
 
   // Keyboard-aware sticky submit bar
