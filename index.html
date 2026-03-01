@@ -81,6 +81,7 @@ textarea.fi{min-height:80px;resize:vertical}
     <input class="lin" id="lPn" type="password" inputmode="numeric" maxlength="4" placeholder="PIN 4 หลัก">
     <button class="lbtn" onclick="doLogin()">เข้าสู่ระบบ</button>
     <div class="lerr" id="lErr"></div>
+    <div style="text-align:center;margin-top:16px"><a href="javascript:void(0)" onclick="testConn()" style="font-size:12px;color:#aaa">🔍 ทดสอบการเชื่อมต่อ</a></div>
   </div>
 </div>
 
@@ -102,7 +103,7 @@ textarea.fi{min-height:80px;resize:vertical}
 
 <script>
 const API="https://script.google.com/macros/s/AKfycbyQjfmt-KOnRIKOfQeZs8ZiYxTB8F14cQzGYNedURU4H8gRA-k8ovzjF9ps2oW8G1tW/exec";
-const VER='v15.3';
+const VER='v15.4';
 let cu=null,orders=[],products=[],users=[],teams=[];
 let selP=null,bD='',fProd='ทั้งหมด',fAdm='ทั้งหมด',cPg='';
 
@@ -198,23 +199,56 @@ async function testPOST(){
   alert('POST '+(sent?'ส่งแล้ว (รอ 5 วิ แล้วกด Test API ดู)':'ส่งไม่ได้!'));
 }
 
+// ทดสอบจากหน้า Login
+function testConn(){
+  const err=document.getElementById('lErr');
+  err.textContent='🔍 กำลังทดสอบ...';
+  const t=Date.now();
+  fetch(API).then(r=>r.json()).then(d=>{
+    const ms=Date.now()-t;
+    err.textContent='✅ เชื่อมต่อได้ ('+ms+'ms) | สินค้า:'+(d.products?d.products.length:0)+' สมาชิก:'+(d.users?d.users.length:0);
+    err.style.color='#2E7D32';
+    setTimeout(()=>{err.style.color='';err.textContent=''},8000);
+  }).catch(e=>{
+    err.textContent='❌ เชื่อมต่อไม่ได้: '+e.message;
+  });
+}
+
 // ===== AUTH =====
 function doLogin(){
   const em=document.getElementById('lEm').value.trim().toLowerCase();
   const pin=document.getElementById('lPn').value.trim();
   const err=document.getElementById('lErr');
   if(!em||!pin){err.textContent='กรอกข้อมูลให้ครบ';return}
-  err.textContent='กำลังเข้าสู่ระบบ...';
-  fetch(API).then(r=>r.json()).then(d=>{
+  err.textContent='⏳ กำลังเข้าสู่ระบบ...';
+  // timeout 15 วิ
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(),15000);
+  fetch(API,{signal:ctrl.signal}).then(r=>{
+    clearTimeout(timer);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(d=>{
+    if(d.error){err.textContent='Cloud error: '+d.error;return}
     if(d.users)users=d.users;if(d.products)products=d.products;
     teams=[...new Set(users.map(u=>u.team).filter(Boolean))];
     const u=users.find(x=>x.email===em&&x.pin===pin);
-    if(!u){err.textContent='อีเมลหรือ PIN ไม่ถูกต้อง';return}
+    if(!u){
+      err.textContent='อีเมลหรือ PIN ไม่ถูกต้อง (มี '+users.length+' คนในระบบ)';
+      return;
+    }
     cu=u;localStorage.setItem('th_cu',JSON.stringify(cu));err.textContent='';showApp();
-  }).catch(()=>{
-    const s=localStorage.getItem('th_cu');
-    if(s){const j=JSON.parse(s);if(j.email===em&&j.pin===pin){cu=j;showApp();return}}
-    err.textContent='เชื่อมต่อไม่ได้';
+  }).catch(e=>{
+    clearTimeout(timer);
+    // ลอง offline login
+    const s=localStorage.getItem('th_cu')||localStorage.getItem('cream_cu');
+    if(s){
+      try{
+        const j=JSON.parse(s);
+        if(j.email===em&&j.pin===pin){cu=j;localStorage.setItem('th_cu',JSON.stringify(cu));showApp();return}
+      }catch(x){}
+    }
+    err.textContent='❌ เชื่อมต่อไม่ได้: '+(e.name==='AbortError'?'Timeout 15s':e.message);
   });
 }
 function doLogout(){cu=null;orders=[];products=[];users=[];localStorage.removeItem('th_cu');document.getElementById('app').style.display='none';document.getElementById('loginPage').style.display='flex'}
