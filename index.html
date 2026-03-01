@@ -319,16 +319,32 @@ function doLogin(){
   err.textContent="กำลังตรวจสอบ...";
   fetch(APPS_SCRIPT_URL).then(r=>r.json()).then(data=>{
     if(data.users&&data.users.length>0){users=data.users;sv('cream_users',users)}
-    if(data.products&&data.products.length>0){products=data.products.map(p2=>({...p2,img:p2.img||''}));sv('cream_products',products)}
-    if(data.assign){productAssign=data.assign;sv('cream_prodAssign',productAssign)}
+    if(data.products&&data.products.length>0){products=data.products.map(p2=>({id:p2.id,name:p2.name,short:p2.name,price:0,icon:'',sheet:p2.name,sku:'',img:''}));sv('cream_products',products)}
+    // ดึง orders จาก Cloud ทันที
+    if(data.orders&&data.orders.length>0){
+      orders=data.orders.map(so=>({id:Date.now()+Math.random(),dailyNo:so.dailyNo||0,date:normDate(so.date),time:so.time||'',productName:so.productName||'',price:so.amount||0,qty:1,amount:so.amount||0,phone:so.phone||'',detail:so.detail||'',addedBy:so.adminEmail||'',adminName:so.adminName||'',team:(users.find(u2=>u2.email===so.adminEmail)||{}).team||''}));
+      sv('cream_orders',orders)
+    }
     const u2=users.find(x=>x.email.toLowerCase()===e&&x.pin===p);
     if(u2){cu=u2;sv('cream_cu',u2);err.textContent="";showApp()}
     else{err.textContent="อีเมลหรือรหัส PIN ไม่ถูกต้อง"}
-  }).catch(()=>{err.textContent="อีเมลหรือรหัส PIN ไม่ถูกต้อง"})
+  }).catch(()=>{err.textContent="เชื่อมต่อ Cloud ไม่ได้ ลองใหม่อีกครั้ง"})
 }
 function doLogout(){cu=null;try{localStorage.removeItem('cream_cu')}catch(e){}document.body.classList.remove('boss-mode');document.getElementById('mainApp').style.display='none';document.getElementById('bNav').style.display='none';document.getElementById('loginPage').style.display='flex';document.getElementById('loginEmail').value='';document.getElementById('loginPin').value=''}
-function checkSession(){try{const s=localStorage.getItem('cream_cu');if(s){const u=JSON.parse(s);const v=users.find(x=>x.email===u.email&&x.pin===u.pin);if(v){cu=v;showApp();// ตรวจสอบกับ Cloud ว่ายังมีสิทธิ์อยู่ไหม
-fetch(APPS_SCRIPT_URL).then(r=>r.json()).then(data=>{if(data.users&&data.users.length>0){const still=data.users.find(x=>x.email===cu.email&&x.pin===cu.pin);if(!still){cu=null;localStorage.removeItem('cream_cu');location.reload()}}}).catch(()=>{})}}}catch(e){}}
+function checkSession(){try{const s=localStorage.getItem('cream_cu');if(s){const u=JSON.parse(s);
+  // ถ้ายังไม่มี users ในเครื่อง → ดึงจาก Cloud ก่อน
+  if(users.length===0){
+    fetch(APPS_SCRIPT_URL).then(r=>r.json()).then(data=>{
+      if(data.users&&data.users.length>0){users=data.users;sv('cream_users',users)}
+      if(data.products&&data.products.length>0){products=data.products.map(p=>({id:p.id,name:p.name,short:p.name,price:0,icon:'',sheet:p.name,sku:'',img:''}));sv('cream_products',products)}
+      if(data.orders){orders=data.orders.map(so=>({id:Date.now()+Math.random(),dailyNo:so.dailyNo||0,date:normDate(so.date),time:so.time||'',productName:so.productName||'',price:so.amount||0,qty:1,amount:so.amount||0,phone:so.phone||'',detail:so.detail||'',addedBy:so.adminEmail||'',adminName:so.adminName||'',team:(users.find(u2=>u2.email===so.adminEmail)||{}).team||''}));sv('cream_orders',orders)}
+      const v=users.find(x=>x.email===u.email&&x.pin===u.pin);
+      if(v){cu=v;showApp()}else{localStorage.removeItem('cream_cu')}
+    }).catch(()=>{});
+    return;
+  }
+  const v=users.find(x=>x.email===u.email&&x.pin===u.pin);if(v){cu=v;showApp();
+  fetch(APPS_SCRIPT_URL).then(r=>r.json()).then(data=>{if(data.users&&data.users.length>0){const still=data.users.find(x=>x.email===cu.email&&x.pin===cu.pin);if(!still){cu=null;localStorage.removeItem('cream_cu');location.reload()}}}).catch(()=>{})}}}catch(e){}}
 function showApp(){
   document.getElementById('loginPage').style.display='none';document.getElementById('mainApp').style.display='block';document.getElementById('bNav').style.display='flex';
   // Boss desktop mode
