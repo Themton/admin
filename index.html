@@ -307,7 +307,7 @@ const gMN=k=>{const m=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ
 const allT=()=>['ทั้งหมด',...teams];
 const tC={'ทีม A':'#8B5E3C','ทีม B':'#2196F3','ทีม C':'#4CAF50','ทีม D':'#FF9800','ทีม E':'#9C27B0'};
 const gTC=t=>tC[t]||'#8B5E3C';
-function getDailyNo(date){return orders.filter(o=>o.date===date&&o.addedBy===cu.email).length+1}
+function getDailyNo(date){const myOrders=orders.filter(o=>o.date===date&&(o.addedBy===cu.email||o.adminName===cu.name));return myOrders.length+1}
 
 // LOGIN
 function doLogin(){
