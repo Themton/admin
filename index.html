@@ -361,7 +361,7 @@ function showApp(){
     setTimeout(()=>{syncProducts();syncUsers();console.log('Auto-sync ALL to Cloud')},1000);
   }
   // ทุกคน: ดึงข้อมูลจาก Cloud ทันทีเมื่อ login
-  autoRefreshFromCloud(true);
+  // autoRefresh จะถูกเรียกจาก updateHome/nav อยู่แล้ว
   // โหลด Cloud ใน background
   loadProductsFromSheets().then(()=>{if(cu.role!=='boss'&&products.length>0)renderProdCards()});
 }
@@ -829,7 +829,7 @@ async function autoRefreshFromCloud(force){
     if(cp){
       const pid=cp.id.replace('pg-','');
       if(pid==='orders')renderOrd();
-      if(pid==='home'){if(cu.role==='boss')renderBossHome(td);else updateHome()}
+      if(pid==='home'){if(cu.role==='boss')renderBossHome(td);else renderAdminHome(td)}
       if(pid==='add'&&products.length>0)renderProdCards()
     }
   }catch(e){console.log('Auto-refresh err:',e)}
